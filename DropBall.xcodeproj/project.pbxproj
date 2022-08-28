@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E25FA55F2828760E002833D4 /* Top.swift in Sources */ = {isa = PBXBuildFile; fileRef = E25FA55E2828760E002833D4 /* Top.swift */; };
 		E2BF96B02821C65E000A2B9C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BF96AF2821C65E000A2B9C /* AppDelegate.swift */; };
 		E2BF96B22821C65E000A2B9C /* GameScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = E2BF96B12821C65E000A2B9C /* GameScene.sks */; };
 		E2BF96B42821C65E000A2B9C /* Actions.sks in Resources */ = {isa = PBXBuildFile; fileRef = E2BF96B32821C65E000A2B9C /* Actions.sks */; };
@@ -16,6 +17,9 @@
 		E2BF96BD2821C65F000A2B9C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E2BF96BC2821C65F000A2B9C /* Assets.xcassets */; };
 		E2BF96C82821C65F000A2B9C /* DropBallTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BF96C72821C65F000A2B9C /* DropBallTests.swift */; };
 		E2BF96D32821C65F000A2B9C /* DropBallUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BF96D22821C65F000A2B9C /* DropBallUITests.swift */; };
+		E2BF96E12821F354000A2B9C /* Entity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2BF96E02821F354000A2B9C /* Entity.swift */; };
+		E2E28ACA282733EB001F8935 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E28AC9282733EB001F8935 /* Platform.swift */; };
+		E2E28ACC282781FF001F8935 /* mod.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E28ACB282781FF001F8935 /* mod.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +40,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		E25FA55E2828760E002833D4 /* Top.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Top.swift; sourceTree = "<group>"; };
 		E2BF96AC2821C65E000A2B9C /* DropBall.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DropBall.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2BF96AF2821C65E000A2B9C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E2BF96B12821C65E000A2B9C /* GameScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = GameScene.sks; sourceTree = "<group>"; };
@@ -51,6 +56,9 @@
 		E2BF96CE2821C65F000A2B9C /* DropBallUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DropBallUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2BF96D22821C65F000A2B9C /* DropBallUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropBallUITests.swift; sourceTree = "<group>"; };
 		E2BF96D42821C65F000A2B9C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E2BF96E02821F354000A2B9C /* Entity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Entity.swift; sourceTree = "<group>"; };
+		E2E28AC9282733EB001F8935 /* Platform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
+		E2E28ACB282781FF001F8935 /* mod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = mod.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +117,10 @@
 				E2BF96B92821C65E000A2B9C /* Main.storyboard */,
 				E2BF96BC2821C65F000A2B9C /* Assets.xcassets */,
 				E2BF96BE2821C65F000A2B9C /* Info.plist */,
+				E2BF96E02821F354000A2B9C /* Entity.swift */,
+				E2E28AC9282733EB001F8935 /* Platform.swift */,
+				E2E28ACB282781FF001F8935 /* mod.swift */,
+				E25FA55E2828760E002833D4 /* Top.swift */,
 			);
 			path = DropBall;
 			sourceTree = "<group>";
@@ -262,9 +274,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E2E28ACA282733EB001F8935 /* Platform.swift in Sources */,
+				E2BF96E12821F354000A2B9C /* Entity.swift in Sources */,
+				E2E28ACC282781FF001F8935 /* mod.swift in Sources */,
 				E2BF96B62821C65E000A2B9C /* GameScene.swift in Sources */,
 				E2BF96B82821C65E000A2B9C /* GameViewController.swift in Sources */,
 				E2BF96B02821C65E000A2B9C /* AppDelegate.swift in Sources */,
+				E25FA55F2828760E002833D4 /* Top.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
