@@ -31,6 +31,9 @@ class Entity {
     var hitCooldown : Int = 10
     var cooldownTimer : Int = 0
     
+    var reductionX: CGFloat = 1
+    var reductionY: CGFloat = 1
+    
     static var cameraTranslationX : CGFloat = 0
     static var cameraTranslationY : CGFloat = 0
     
@@ -42,6 +45,7 @@ class Entity {
     init(posX: CGFloat, posY: CGFloat, imageNamed: String, falls: Bool){
         self.posX = posX
         self.posY = posY
+        
         self.truePosY = posY
         self.sprite = SKSpriteNode(imageNamed: imageNamed)
         
@@ -59,6 +63,9 @@ class Entity {
         self.yBound.append(posY + height/2)
         
         self.falls = falls
+        
+        sprite.position.x = posX + Entity.cameraTranslationX
+        sprite.position.y = posY + Entity.cameraTranslationY
     }
     
     private func inRect(p:[CGFloat], o1:[CGFloat], o4:[CGFloat]) -> Bool{
@@ -78,6 +85,23 @@ class Entity {
         if(self.isColliding(obj : obj.leftPlatform) || self.isColliding(obj : obj.rightPlatform)){
             return true
         }
+        return false
+    }
+    
+    func isColliding(obj: SinglePlatform) -> Bool{
+    
+        if(self.isColliding(obj : obj.leftPlatform)){
+            return true
+        }
+        return false
+    }
+    
+    func isColliding_endcap(obj: Platform) -> Bool{
+        
+        if(self.isColliding(obj : obj.leftEndCap) || self.isColliding(obj : obj.rightEndCap)){
+            return true
+        }
+        
         return false
     }
     
@@ -156,6 +180,7 @@ class Entity {
                     and make set it to (sign)*C where C is some constant velocity. This will ensure
                     that the ball always bounces to the same height. */
                 //yVel = -yVel
+                //yVel = 11
                 yVel = 11
             }
         }
@@ -167,7 +192,7 @@ class Entity {
                 hitGround = false
             }
             else{
-                cooldownTimer = 15
+                cooldownTimer = 50
                 hitGround = true
             }
             
@@ -223,14 +248,21 @@ class Entity {
         if(falls){
             posX = remainder(posX, 750)
         }
+        //sprite.position.x = posX + Entity.cameraTranslationX
         sprite.position.x = posX + Entity.cameraTranslationX
         sprite.position.y = posY + Entity.cameraTranslationY
         
-        self.xBound[0] = (posX - width/2)
-        self.xBound[1] = (posX + width/2)
+        //self.xBound[0] = (posX - width/2) + reduction
+        //self.xBound[1] = (posX + width/2) - reduction
         
-        self.yBound[0] = (posY - height/2)
-        self.yBound[1] = (posY + height/2)
+        //self.yBound[0] = (posY - height/2) + reduction
+        //self.yBound[1] = (posY + height/2) - reduction
+        
+        self.xBound[0] = (posX - (width/2)*reductionX)
+        self.xBound[1] = (posX + (width/2)*reductionX)
+        
+        self.yBound[0] = (posY - (height/2)*reductionY)
+        self.yBound[1] = (posY + (height/2)*reductionY)
         
 
         

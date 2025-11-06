@@ -11,6 +11,15 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    
+    lazy var coreDataStack: CoreDataStack = .init(modelName: "Scores")
+
+        static let sharedAppDelegate: AppDelegate = {
+            guard let delegate = UIApplication.shared.delegate as? AppDelegate else {
+                fatalError("Unexpected app delegate type, did it change? \(String(describing: UIApplication.shared.delegate))")
+            }
+            return delegate
+        }()
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
@@ -25,6 +34,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
+        AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {

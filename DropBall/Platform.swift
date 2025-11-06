@@ -43,7 +43,20 @@ class Platform {
         self.leftEndCap =  Entity(posX:0+offset+endOffset+sep, posY:self.posY, imageNamed:"end", falls:false)
         self.leftEndCap.setScale(scale: -1)
         self.rightEndCap = Entity(posX:0+offset-endOffset-sep, posY:self.posY, imageNamed:"end", falls:false)
-        //self.rightEndCap.setScale(scale: 1.2)
+        
+        self.rightEndCap.reductionX = 0.75
+        self.rightEndCap.reductionY = 0.925
+        self.leftEndCap.reductionX = 0.75
+        self.leftEndCap.reductionY = 0.925
+        //self.leftEndCap.xBound[0] = reduction
+        //self.leftEndCap.xBound[1] = reduction
+        //self.leftEndCap.yBound[0] = reduction
+        //self.leftEndCap.yBound[1] = reduction
+        
+        //self.rightEndCap.xBound[0] = reduction
+        //self.rightEndCap.xBound[1] = reduction
+        //self.rightEndCap.yBound[0] = reduction
+        //self.rightEndCap.yBound[1] = reduction
     }
     
     func getSpriteNode() -> [SKSpriteNode]{

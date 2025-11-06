@@ -24,7 +24,7 @@ class Top : Entity{
         increase = true
     }
     func increaseVel(){
-        print(velocity)
+        //print(velocity)
         velocity = velocity + 0.01
     }
     
