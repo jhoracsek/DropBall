@@ -29,7 +29,8 @@ class StartScene: SKScene {
     
     var highscoreButton = SKButton(x:0, y:100, unclick:"highscore", click:"highscoreclick", test_function: {} )
     
-    var settingsButton = SKButton(x:0, y:100, unclick:"smallbutton", click:"smallbutton", test_function: {} )
+    var settingsButton = SKButton(x:0, y:100, unclick:"pause", click:"pause", test_function: {} )
+    
     
     let logo = SKSpriteNode(imageNamed: "logo")
     
@@ -43,6 +44,8 @@ class StartScene: SKScene {
     
     let HEIGHT : CGFloat = GameViewController.HEIGHT
     let WIDTH : CGFloat = GameViewController.WIDTH
+    
+    
     
     override func didMove(to view: SKView) {
         Entity.cameraTranslationY = 0
@@ -87,14 +90,6 @@ class StartScene: SKScene {
         platform.getSpriteNode()[0].zPosition = 2
         platform.update()
         
-        /*
-        test.text = String("Highscore: 0")
-        addChild(test)
-        test.fontSize = 80
-        test.position = CGPoint(x: 0, y:100)
-        test.zPosition=20
-        */
-        
         startButton = SKButton(x:-125, y:120+offset, unclick:"play", click:"playclick", test_function: go_to_game )
         
         for i in startButton.getSpriteNode(){
@@ -107,12 +102,14 @@ class StartScene: SKScene {
         for i in highscoreButton.getSpriteNode(){
             self.addChild(i)
         }
+        //HEIGHT/2-75
+        settingsButton = //SKButton(x:(WIDTH/2-75), y:-HEIGHT/2+75, unclick:"pause", click:"pause", test_function: go_to_settings )
+                           SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"pause", click:"homebuttonsmall", test_function: go_to_settings )
+        settingsButton.scale(scale: 0.65)
         
-        //settingsButton = SKButton(x:85, y:-200, unclick:"smallbutton", click:"smallbutton", test_function: test_func )
-        
-        //for i in settingsButton.getSpriteNode(){
-        //    self.addChild(i)
-        //}
+        for i in settingsButton.getSpriteNode(){
+            self.addChild(i)
+        }
         
         //A little bit of code
         logo.position = CGPoint(x: 0, y:275+offset)
@@ -138,6 +135,16 @@ class StartScene: SKScene {
         if let scene = SKScene(fileNamed: "HighscoreScene") {
             // Set the scale mode to scale to fit the window
             //scene.scaleMode = .aspectFill
+            scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
+            scene.scaleMode = .aspectFill
+            let reveal = SKTransition.crossFade(withDuration: 0.5)
+            self.view?.presentScene(scene, transition: reveal)
+        }
+    }
+    
+    func go_to_settings(){
+        if let scene = SKScene(fileNamed: "SettingsScene") {
+            // Set the scale mode to scale to fit the window
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
             let reveal = SKTransition.crossFade(withDuration: 0.5)

@@ -48,6 +48,7 @@ class GameScene: SKScene {
     
     var pauseCooldown = 5
     
+    let rumbleOff = UserDefaults.standard.bool(forKey: "RumbleOff")
     
     
     var platforms : [Platform] = []
@@ -76,7 +77,7 @@ class GameScene: SKScene {
             prev = cNum
         }
     }
-    
+    var showHitboxes = true
     
     override func didMove(to view: SKView) {
         
@@ -132,8 +133,23 @@ class GameScene: SKScene {
             //platform.setScale(scaleX: 3, scaleY: 1)
             ball.getSpriteNode().zPosition = 2
             addChild(ball.getSpriteNode())
-            
+                
+            // Now also add the hitbox for the ball
+            if(showHitboxes){
+                addChild(ball.hitbox)
+            }
+                
             for platform in platforms {
+                if(showHitboxes){
+                    addChild(platform.leftEndCap.hitbox)
+                    addChild(platform.rightEndCap.hitbox)
+                    
+                    platform.leftPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
+                    platform.rightPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
+                    
+                    addChild(platform.leftPlatform.hitbox)
+                    addChild(platform.rightPlatform.hitbox)
+                }
                 for i in platform.getSpriteNode(){
                     i.zPosition=1
                     addChild(i)
@@ -256,12 +272,42 @@ class GameScene: SKScene {
         resumeButton.unpressed()
     }
     
+    
+    /*
+        Implementing long press speed up.
+     */
+
+    var holdTimer: Timer?
+    var isTouchForHold = false
+    var isHolding = false
+    
+    var initialHoldLocation: CGPoint = .zero
+    let holdTolerance: CGFloat = 40
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         /*
         if let label = self.label {
             label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
         }*/
         
+        
+        isTouchForHold = true
+        isHolding = false
+        
+        if let touch = touches.first {
+            initialHoldLocation = touch.location(in: self)
+        }
+        
+        holdTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false){ [weak self] _ in
+            guard let self = self else { return }
+            if self.isTouchForHold {
+                self.isHolding = true
+                //Here you should tell the ball to be pushed down.
+                ball.pushDown()
+                
+            }
+            
+        }
         
         for t in touches {
             self.touchDown(atPoint: t.location(in: self))
@@ -270,6 +316,17 @@ class GameScene: SKScene {
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let touch = touches.first {
+            let location = touch.location(in: self)
+            
+            if !isHolding{
+                let distance = hypot(location.x - initialHoldLocation.x, location.y - initialHoldLocation.y)
+                if distance > holdTolerance {
+                    cancelHold()
+                }
+            }
+        }
+        
         
         for t in touches {
             self.touchMoved(toPoint: t.location(in: self))
@@ -278,11 +335,26 @@ class GameScene: SKScene {
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        endTouch()
         for t in touches { self.touchUp(atPoint: t.location(in: self));return }
+        
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        endTouch()
         for t in touches { self.touchUp(atPoint: t.location(in: self));return }
+        
+    }
+    
+    private func cancelHold(){
+        holdTimer?.invalidate()
+        holdTimer = nil
+    }
+    
+    private func endTouch(){
+        isTouchForHold = false
+        isHolding = false
+        cancelHold()
     }
     
     func save(){
@@ -375,8 +447,9 @@ class GameScene: SKScene {
             child.zPosition = 40
             addChild(child)
         }
-        
-        AudioServicesPlayAlertSound(SystemSoundID(kSystemSoundID_Vibrate))
+        if(!rumbleOff){
+            AudioServicesPlayAlertSound(SystemSoundID(kSystemSoundID_Vibrate))
+        }
         //lose()
     }
     
@@ -446,6 +519,18 @@ class GameScene: SKScene {
     }
     
     override func update(_ currentTime: TimeInterval) {
+        /*
+         For Testing
+         */
+        if(isHolding){
+            ball.hitbox.color = SKColor.init(red: 0.0, green: 0, blue: 1, alpha: 0.5)
+            ball.speedAcc()
+        }else{
+            ball.hitbox.color = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
+            ball.slowAcc()
+        }
+        //print(ball.cooldownTimer)
+        
         if(gameLost){
             ball.falls = false
             if(shake){

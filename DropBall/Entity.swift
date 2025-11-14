@@ -16,6 +16,10 @@ class Entity {
     
     var sprite : SKSpriteNode
     
+    var hitbox: SKSpriteNode
+    var hitboxColor = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
+    
+    
     var xBound : [CGFloat] = []
     var yBound : [CGFloat] = []
     
@@ -66,6 +70,11 @@ class Entity {
         
         sprite.position.x = posX + Entity.cameraTranslationX
         sprite.position.y = posY + Entity.cameraTranslationY
+        
+        hitbox = SKSpriteNode(color: hitboxColor, size: CGSizeMake(width*reductionX, height*reductionY))
+        hitbox.position.x = posX + Entity.cameraTranslationX
+        hitbox.position.y = posY + Entity.cameraTranslationY
+        hitbox.zPosition = 5
     }
     
     private func inRect(p:[CGFloat], o1:[CGFloat], o4:[CGFloat]) -> Bool{
@@ -186,6 +195,27 @@ class Entity {
         }
     }
     
+    func pushDown(){
+        if(yVel > 0){
+            yVel = -yVel
+        }
+    }
+    
+    func speedAcc(){
+        // Dependent on the velocity!
+        // When falling: Velocity is negative. When rising (moving up): Velocity is positive.
+        if(yVel < 0){
+            //cAcc = -0.420
+            cAcc = -0.490
+        }else{
+            cAcc = -0.220
+        }
+    }
+    
+    func slowAcc(){
+        cAcc = -0.220
+    }
+    
     func setHitGroud(val: Bool){
         if(val == true){
             if( (cooldownTimer > 0) ) {
@@ -244,6 +274,7 @@ class Entity {
     }
     
     func update(){
+        
         //sprite.position.x = mod(posX + Entity.cameraTranslationX, 750)
         if(falls){
             posX = remainder(posX, 750)
@@ -264,7 +295,12 @@ class Entity {
         self.yBound[0] = (posY - (height/2)*reductionY)
         self.yBound[1] = (posY + (height/2)*reductionY)
         
+        hitbox.position.x = posX + Entity.cameraTranslationX
+        hitbox.position.y = posY + Entity.cameraTranslationY
 
+        hitbox.size.width = width*reductionX
+        hitbox.size.height = height*reductionY
+        
         
         falling()
         
