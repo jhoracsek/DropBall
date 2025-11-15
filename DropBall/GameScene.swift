@@ -22,9 +22,15 @@ class GameScene: SKScene {
     private var yDelta : CGFloat = 0
     private var score = 0
     private var sceneNum = 0
+
+    //Values which can be changed for testing.
+    let topBarEndsGame = true
+    let showHitboxes = false
+    // End testing values.
     
     //let ball = SKSpriteNode(imageNamed: "ball")
     let ball = Entity(posX:0, posY:0, imageNamed:"ball", falls:true)
+    
     let top = Top(posY:500)
     let background = SKSpriteNode(imageNamed: "background")
     let pauseText = SKSpriteNode(imageNamed: "pausetext")
@@ -77,11 +83,8 @@ class GameScene: SKScene {
             prev = cNum
         }
     }
-    var showHitboxes = true
     
     override func didMove(to view: SKView) {
-        
-  
         self.backgroundColor = SKColor(red: 18/256, green: 45/256, blue: 110/256, alpha: 1)
         background.anchorPoint = CGPoint(x:0.5,y:1.0)
         background.position.y = GameViewController.HEIGHT/2
@@ -133,6 +136,7 @@ class GameScene: SKScene {
             //platform.setScale(scaleX: 3, scaleY: 1)
             ball.getSpriteNode().zPosition = 2
             addChild(ball.getSpriteNode())
+            addChild(ball.initSecondarySprite())
                 
             // Now also add the hitbox for the ball
             if(showHitboxes){
@@ -214,6 +218,7 @@ class GameScene: SKScene {
                 }
             }
             */
+      
         if(lost_sec){
             startButton.checkPressed(pos: pos)
             homeButton.checkPressed(pos: pos)
@@ -254,7 +259,8 @@ class GameScene: SKScene {
         //Speed should be determined by the difference of the position of the finger and the initialPosition.
         //let ballPosition = ball.sprite.position.x
         
-        if(isTouched){
+        if(isTouched && abs(pos.x - initialPosition) > 5){
+            // Implement some degree of tolerance.
             let fingerPosition = pos.x
             difference = 0.1*(fingerPosition - initialPosition)
         }

@@ -16,6 +16,7 @@ class Entity {
     
     var sprite : SKSpriteNode
     
+    
     var hitbox: SKSpriteNode
     var hitboxColor = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
     
@@ -43,8 +44,9 @@ class Entity {
     
     var hb : CGFloat = 7
     
-    
-    
+    var secondarySprite: SKSpriteNode?
+    var hasSecondarySprite = false
+    var spriteName: String?
     
     init(posX: CGFloat, posY: CGFloat, imageNamed: String, falls: Bool){
         self.posX = posX
@@ -56,6 +58,7 @@ class Entity {
         self.sprite.position.x=posX
         self.sprite.position.y=posY
         
+        self.spriteName = imageNamed
         
         self.height = sprite.size.height
         self.width = sprite.size.width
@@ -75,6 +78,40 @@ class Entity {
         hitbox.position.x = posX + Entity.cameraTranslationX
         hitbox.position.y = posY + Entity.cameraTranslationY
         hitbox.zPosition = 5
+    }
+    /*
+     
+     func setScale(scale: CGFloat){
+         var scaling = CGSize()
+         scaling.width = scale * self.width
+         scaling.height = scale * self.height
+         sprite.size = scaling
+         
+         self.height = sprite.size.height
+         self.width = sprite.size.width
+         
+         return
+     }
+     */
+  
+    
+    func initSecondarySprite() -> SKSpriteNode{
+        hasSecondarySprite = true
+        
+        
+        secondarySprite = SKSpriteNode(imageNamed: spriteName ?? "ball")
+        
+        secondarySprite?.position.x = posX + 10
+        secondarySprite?.position.y = posY
+        secondarySprite?.zPosition = 2
+        
+        
+        var scaling = CGSize()
+        scaling.width = sprite.size.height
+        scaling.height = sprite.size.width
+        secondarySprite?.size = scaling
+        
+        return secondarySprite!
     }
     
     private func inRect(p:[CGFloat], o1:[CGFloat], o4:[CGFloat]) -> Bool{
@@ -188,8 +225,9 @@ class Entity {
                 /*  What I probably need to do here is just take the sign on the previous velocity
                     and make set it to (sign)*C where C is some constant velocity. This will ensure
                     that the ball always bounces to the same height. */
-                //yVel = -yVel
-                //yVel = 11
+                
+                
+                // You can add some value here that sets a cooldown for the pushDown function.
                 yVel = 11
             }
         }
@@ -277,11 +315,23 @@ class Entity {
         
         //sprite.position.x = mod(posX + Entity.cameraTranslationX, 750)
         if(falls){
-            posX = remainder(posX, 750)
+            posX = remainder(posX, 755)
         }
+        
         //sprite.position.x = posX + Entity.cameraTranslationX
         sprite.position.x = posX + Entity.cameraTranslationX
         sprite.position.y = posY + Entity.cameraTranslationY
+        
+        if(hasSecondarySprite){
+            //posX = remainder(posX, 750)
+            if(posX > 0){
+                secondarySprite?.position.x = posX - 755 + Entity.cameraTranslationX
+                secondarySprite?.position.y = posY + Entity.cameraTranslationY
+            }else{
+                secondarySprite?.position.x = posX + 755 + Entity.cameraTranslationX
+                secondarySprite?.position.y = posY + Entity.cameraTranslationY
+            }
+        }
         
         //self.xBound[0] = (posX - width/2) + reduction
         //self.xBound[1] = (posX + width/2) - reduction
