@@ -137,7 +137,8 @@ class GameScene: SKScene {
             ball.getSpriteNode().zPosition = 2
             addChild(ball.getSpriteNode())
             addChild(ball.initSecondarySprite())
-                
+            //addChild(ball.initParticles())
+                ball.initParticles()
             // Now also add the hitbox for the ball
             if(showHitboxes){
                 addChild(ball.hitbox)
@@ -262,6 +263,7 @@ class GameScene: SKScene {
         if(isTouched && abs(pos.x - initialPosition) > 5){
             // Implement some degree of tolerance.
             let fingerPosition = pos.x
+            ball.fingerPosition = pos.x
             difference = 0.1*(fingerPosition - initialPosition)
         }
         
@@ -304,7 +306,7 @@ class GameScene: SKScene {
             initialHoldLocation = touch.location(in: self)
         }
         
-        holdTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false){ [weak self] _ in
+        holdTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false){ [weak self] _ in
             guard let self = self else { return }
             if self.isTouchForHold {
                 self.isHolding = true

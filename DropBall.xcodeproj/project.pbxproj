@@ -11,6 +11,7 @@
 		E22952A128BC09BD00218A5C /* StartScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = E22952A028BC09BD00218A5C /* StartScene.sks */; };
 		E22952A328BC7AB700218A5C /* SKButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22952A228BC7AB700218A5C /* SKButton.swift */; };
 		E24A4F312957A82500466DDA /* Scores.xcdatamodeld in Resources */ = {isa = PBXBuildFile; fileRef = E2980ACE294BB82C00FD8951 /* Scores.xcdatamodeld */; };
+		E25A0B672ECB93DA0085E61E /* Particle.sks in Resources */ = {isa = PBXBuildFile; fileRef = E25A0B662ECB93DA0085E61E /* Particle.sks */; };
 		E25FA55F2828760E002833D4 /* Top.swift in Sources */ = {isa = PBXBuildFile; fileRef = E25FA55E2828760E002833D4 /* Top.swift */; };
 		E2604EAB2EBE6B04003AA4DD /* SettingsScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = E2604EAA2EBE6B04003AA4DD /* SettingsScene.sks */; };
 		E2604EAD2EBE6B14003AA4DD /* SettingsScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2604EAC2EBE6B0E003AA4DD /* SettingsScene.swift */; };
@@ -58,6 +59,7 @@
 		E229529C28BC04A500218A5C /* StartScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartScene.swift; sourceTree = "<group>"; };
 		E22952A028BC09BD00218A5C /* StartScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = StartScene.sks; sourceTree = "<group>"; };
 		E22952A228BC7AB700218A5C /* SKButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKButton.swift; sourceTree = "<group>"; };
+		E25A0B662ECB93DA0085E61E /* Particle.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = Particle.sks; sourceTree = "<group>"; };
 		E25FA55E2828760E002833D4 /* Top.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Top.swift; sourceTree = "<group>"; };
 		E2604EAA2EBE6B04003AA4DD /* SettingsScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = SettingsScene.sks; sourceTree = "<group>"; };
 		E2604EAC2EBE6B0E003AA4DD /* SettingsScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScene.swift; sourceTree = "<group>"; };
@@ -167,6 +169,7 @@
 				E2BF96BE2821C65F000A2B9C /* Info.plist */,
 				E2BF96E02821F354000A2B9C /* Entity.swift */,
 				E2E28AC9282733EB001F8935 /* Platform.swift */,
+				E25A0B662ECB93DA0085E61E /* Particle.sks */,
 				E2E28ACB282781FF001F8935 /* mod.swift */,
 				E25FA55E2828760E002833D4 /* Top.swift */,
 				E2980ACE294BB82C00FD8951 /* Scores.xcdatamodeld */,
@@ -303,6 +306,7 @@
 				E2BF96BB2821C65E000A2B9C /* Main.storyboard in Resources */,
 				E2BF96B22821C65E000A2B9C /* GameScene.sks in Resources */,
 				E2BF96BD2821C65F000A2B9C /* Assets.xcassets in Resources */,
+				E25A0B672ECB93DA0085E61E /* Particle.sks in Resources */,
 				E22952A128BC09BD00218A5C /* StartScene.sks in Resources */,
 				E2BF96B42821C65E000A2B9C /* Actions.sks in Resources */,
 				E28FEFDF294B1008005A4A8D /* HighscoreScene.sks in Resources */,

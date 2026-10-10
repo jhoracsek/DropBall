@@ -41,7 +41,8 @@ class Platform {
         self.pass = Entity(posX:0+offset, posY:self.posY-20, imageNamed:"end", falls:false)
     
         self.leftEndCap =  Entity(posX:0+offset+endOffset+sep, posY:self.posY, imageNamed:"end", falls:false)
-        self.leftEndCap.setScale(scale: -1)
+        //self.leftEndCap.setScale(scale: -1)
+        self.leftEndCap.setScale(scaleX: -1, scaleY: 1)
         self.rightEndCap = Entity(posX:0+offset-endOffset-sep, posY:self.posY, imageNamed:"end", falls:false)
         
         self.rightEndCap.reductionX = 0.75

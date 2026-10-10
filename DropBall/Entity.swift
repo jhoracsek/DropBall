@@ -48,6 +48,11 @@ class Entity {
     var hasSecondarySprite = false
     var spriteName: String?
     
+    var particles: SKEmitterNode?
+    var hasParticles = false
+    var fingerPosition: CGFloat =  0
+    
+    
     init(posX: CGFloat, posY: CGFloat, imageNamed: String, falls: Bool){
         self.posX = posX
         self.posY = posY
@@ -93,7 +98,24 @@ class Entity {
          return
      }
      */
-  
+    func initParticles() -> SKEmitterNode{
+        hasParticles = true
+        
+        let mainBundle = Bundle.main
+        let sparkEmitterPath = mainBundle.path(forResource: "Particle", ofType: "sks")
+        particles = NSKeyedUnarchiver.unarchiveObject(withFile: sparkEmitterPath!) as! SKEmitterNode
+        
+        particles!.position = self.sprite.position
+        particles!.name = "sparkEmitter"
+        //particles!.targetNode = self.sprite
+        particles!.particleZPosition = -1
+        //particles!.zPosition = -100
+        
+        self.sprite.addChild(particles!)
+        //self.secondarySprite!.addChild(particles!)
+        return particles!
+    }
+    
     
     func initSecondarySprite() -> SKSpriteNode{
         hasSecondarySprite = true
@@ -245,13 +267,16 @@ class Entity {
         if(yVel < 0){
             //cAcc = -0.420
             cAcc = -0.490
+            particles!.particleBirthRate = 100//abs(yVel)*10
         }else{
             cAcc = -0.220
+            particles!.particleBirthRate = 0
         }
     }
     
     func slowAcc(){
         cAcc = -0.220
+        particles!.particleBirthRate = 0
     }
     
     func setHitGroud(val: Bool){
@@ -311,11 +336,12 @@ class Entity {
         }
     }
     
+    let moveSize:CGFloat = 770
+    var prevX = Entity.cameraTranslationX
     func update(){
-        
         //sprite.position.x = mod(posX + Entity.cameraTranslationX, 750)
         if(falls){
-            posX = remainder(posX, 755)
+            posX = remainder(posX, moveSize)
         }
         
         //sprite.position.x = posX + Entity.cameraTranslationX
@@ -325,14 +351,22 @@ class Entity {
         if(hasSecondarySprite){
             //posX = remainder(posX, 750)
             if(posX > 0){
-                secondarySprite?.position.x = posX - 755 + Entity.cameraTranslationX
+                secondarySprite?.position.x = posX - moveSize + Entity.cameraTranslationX
                 secondarySprite?.position.y = posY + Entity.cameraTranslationY
             }else{
-                secondarySprite?.position.x = posX + 755 + Entity.cameraTranslationX
+                secondarySprite?.position.x = posX + moveSize + Entity.cameraTranslationX
                 secondarySprite?.position.y = posY + Entity.cameraTranslationY
             }
         }
         
+        if(hasParticles){
+            //particles?.position.x = posX + Entity.cameraTranslationX
+            //particles?.position.y = posY + Entity.cameraTranslationY
+            // Make the particles trail slightly.
+            //particles?.position.x = posX + Entity.cameraTranslationX//prevX
+            //particles?.position.y = posY + Entity.cameraTranslationY
+        }
+        prevX = posX + Entity.cameraTranslationX
         //self.xBound[0] = (posX - width/2) + reduction
         //self.xBound[1] = (posX + width/2) - reduction
         
