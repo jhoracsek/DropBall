@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17541947307AC48B00FEAC5F /* SceneDelegate.swift */; };
 		E229529D28BC04A500218A5C /* StartScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = E229529C28BC04A500218A5C /* StartScene.swift */; };
 		E22952A128BC09BD00218A5C /* StartScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = E22952A028BC09BD00218A5C /* StartScene.sks */; };
 		E22952A328BC7AB700218A5C /* SKButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22952A228BC7AB700218A5C /* SKButton.swift */; };
@@ -55,6 +56,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		17541947307AC48B00FEAC5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		E229529C28BC04A500218A5C /* StartScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartScene.swift; sourceTree = "<group>"; };
 		E22952A028BC09BD00218A5C /* StartScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = StartScene.sks; sourceTree = "<group>"; };
 		E22952A228BC7AB700218A5C /* SKButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKButton.swift; sourceTree = "<group>"; };
@@ -174,6 +176,7 @@
 				E269D1DA295ED64500ED3735 /* SinglePlatform.swift */,
 				E269D1DC295EECEF00ED3735 /* Cloud.swift */,
 				E2BF96B32821C65E000A2B9C /* Actions.sks */,
+				17541947307AC48B00FEAC5F /* SceneDelegate.swift */,
 			);
 			path = DropBall;
 			sourceTree = "<group>";
@@ -347,6 +350,7 @@
 				E25FA55F2828760E002833D4 /* Top.swift in Sources */,
 				E28FEFDD294B0D6E005A4A8D /* HighscoreScene.swift in Sources */,
 				E269D1DD295EECEF00ED3735 /* Cloud.swift in Sources */,
+				17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */,
 				E22952A328BC7AB700218A5C /* SKButton.swift in Sources */,
 				E229529D28BC04A500218A5C /* StartScene.swift in Sources */,
 			);
