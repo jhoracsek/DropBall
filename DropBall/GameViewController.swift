@@ -18,6 +18,18 @@ class GameViewController: UIViewController {
     static var HEIGHT : CGFloat = 1624.0
     static var WIDTH : CGFloat = 750.0
 
+    /// The scene height every vertical gameplay constant in the project was authored against.
+    static let REFERENCE_HEIGHT : CGFloat = 1334.0
+
+    /// Scene width is fixed at 750 on every device, but the scene height grows on taller
+    /// phones so nothing gets cropped. That means a vertical distance of 1 scene unit covers
+    /// a smaller fraction of the screen on a tall phone than on a short one, so unscaled
+    /// per-frame speeds and world spacing make the game look slower and more tightly packed
+    /// there. Multiplying every vertical world distance and speed by this factor keeps motion
+    /// and layout at a constant fraction of the screen on all aspect ratios. It is exactly 1.0
+    /// on devices that use the reference height, so their behaviour is unchanged.
+    static var vScale : CGFloat { HEIGHT / REFERENCE_HEIGHT }
+
     override func viewDidLoad() {
         let screenWidth = UIScreen.main.bounds.width
         let screenHeight = UIScreen.main.bounds.height

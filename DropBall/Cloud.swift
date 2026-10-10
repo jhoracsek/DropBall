@@ -74,7 +74,7 @@ class Cloud {
             
         }
         self.posY = pY
-        let verticleOffset = CGFloat(Int.random(in: -100...125))
+        let verticleOffset = CGFloat(Int.random(in: -100...125)) * GameViewController.vScale
         
 
         //Default offset should be offscreen.
@@ -157,18 +157,23 @@ class Cloud {
             coolDown-=1
         }
         
-        if (cloud.posY > baseY + 7){
+        // Both the wobble amplitude and its per-frame speed are scaled, which keeps the
+        // drift looking identical on every aspect ratio and leaves its period unchanged.
+        let wobbleAmplitude = 7 * GameViewController.vScale
+        let wobbleStep = wobble * GameViewController.vScale
+
+        if (cloud.posY > baseY + wobbleAmplitude){
             moveUp = false
         }
         
-        if (cloud.posY < baseY - 7){
+        if (cloud.posY < baseY - wobbleAmplitude){
             moveUp = true
         }
 
         if (moveUp){
-            cloud.posY+=wobble
+            cloud.posY+=wobbleStep
         }else{
-            cloud.posY-=wobble
+            cloud.posY-=wobbleStep
         }
         
         cloud.sprite.position.x = cloud.posX + Entity.cameraTranslationX

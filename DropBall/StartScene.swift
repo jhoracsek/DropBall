@@ -36,9 +36,9 @@ class StartScene: SKScene {
     
     let mountains = SKSpriteNode(imageNamed: "mountains")
     
-    let ball = Entity(posX:0, posY:-60, imageNamed:"ball", falls:true)
+    let ball = Entity(posX:0, posY:-60 * GameViewController.vScale, imageNamed:"ball", falls:true)
     
-    var platform : SinglePlatform = SinglePlatform(pY:-380)
+    var platform : SinglePlatform = SinglePlatform(pY:-380 * GameViewController.vScale)
     
     var clouds : [Cloud] = [];
     
@@ -57,14 +57,14 @@ class StartScene: SKScene {
             let isIncluded = Bool.random()
             if (i > 6){
                 if(isIncluded){
-                    let cloud = Cloud(pY:500+addOffset, cloudNum: i)
+                    let cloud = Cloud(pY:(500+addOffset) * GameViewController.vScale, cloudNum: i)
                     clouds.append(cloud)
                     addChild(cloud.getSpriteNode())
                     cloud.getSpriteNode().zPosition = CGFloat(i)
                     cloud.getSpriteNode().alpha = 1
                 }
             }else{
-                let cloud = Cloud(pY:500+addOffset, cloudNum: i)
+                let cloud = Cloud(pY:(500+addOffset) * GameViewController.vScale, cloudNum: i)
                 clouds.append(cloud)
                 addChild(cloud.getSpriteNode())
                 cloud.getSpriteNode().zPosition = CGFloat(i)

@@ -30,7 +30,9 @@ class Entity {
     var falls : Bool
     var hitGround = false
     
-    var cAcc : CGFloat = -0.220
+    // Vertical speeds and accelerations are scaled so they cover the same fraction of the
+    // screen on every aspect ratio. See GameViewController.vScale.
+    var cAcc : CGFloat = -0.220 * GameViewController.vScale
     var yVel : CGFloat = 0
     
     var hitCooldown : Int = 10
@@ -250,7 +252,7 @@ class Entity {
                 
                 
                 // You can add some value here that sets a cooldown for the pushDown function.
-                yVel = 11
+                yVel = 11 * GameViewController.vScale
             }
         }
     }
@@ -266,16 +268,16 @@ class Entity {
         // When falling: Velocity is negative. When rising (moving up): Velocity is positive.
         if(yVel < 0){
             //cAcc = -0.420
-            cAcc = -0.490
+            cAcc = -0.490 * GameViewController.vScale
             particles!.particleBirthRate = 100//abs(yVel)*10
         }else{
-            cAcc = -0.220
+            cAcc = -0.220 * GameViewController.vScale
             particles!.particleBirthRate = 0
         }
     }
     
     func slowAcc(){
-        cAcc = -0.220
+        cAcc = -0.220 * GameViewController.vScale
         particles!.particleBirthRate = 0
     }
     

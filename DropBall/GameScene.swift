@@ -31,13 +31,14 @@ class GameScene: SKScene {
     //let ball = SKSpriteNode(imageNamed: "ball")
     let ball = Entity(posX:0, posY:0, imageNamed:"ball", falls:true)
     
-    let top = Top(posY:500)
+    let top = Top(posY:500 * GameViewController.vScale)
     let background = SKSpriteNode(imageNamed: "background")
     let pauseText = SKSpriteNode(imageNamed: "pausetext")
     let mountains = SKSpriteNode(imageNamed: "mountains")
     let overlay = SKSpriteNode(imageNamed: "loseoverlay")
     let HEIGHT : CGFloat = GameViewController.HEIGHT
     let WIDTH : CGFloat = GameViewController.WIDTH
+    let vScale : CGFloat = GameViewController.vScale
 
     var pauseButton = SKButton(x:0, y:100, unclick:"pause", click:"pause", test_function: {} )
     var resumeButton = SKButton(x:0, y:100, unclick:"resume", click:"resume", test_function: {} )
@@ -64,12 +65,12 @@ class GameScene: SKScene {
     var platoffset : CGFloat = 0
     func loadPlatforms(){
         for _ in 1...10{
-            platforms.append(Platform(pY:-400-platoffset))
-            platoffset = platoffset+450
+            platforms.append(Platform(pY:(-400 * vScale)-platoffset))
+            platoffset = platoffset + (450 * vScale)
         }
     }
     
-    var cloudOffset : CGFloat = 450/2
+    var cloudOffset : CGFloat = (450/2) * GameViewController.vScale
     var prev = -1
     func loadClouds(){
         
@@ -78,8 +79,8 @@ class GameScene: SKScene {
             while(prev == cNum){
                 cNum = Int.random(in: 1...14)
             }
-            clouds.append(Cloud(pY:-400-cloudOffset, cloudNum: cNum, prob:0))
-            cloudOffset = cloudOffset+450
+            clouds.append(Cloud(pY:(-400 * vScale)-cloudOffset, cloudNum: cNum, prob:0))
+            cloudOffset = cloudOffset + (450 * vScale)
             prev = cNum
         }
     }
@@ -592,7 +593,7 @@ class GameScene: SKScene {
             j+=1
             cloud.update()
 
-            if(cloud.cloud.sprite.position.y > 1400){
+            if(cloud.cloud.sprite.position.y > 1400 * vScale){
                 clouds.remove(at:j)
                 removeChildren(in: [cloud.getSpriteNode()])
                 for _ in 1...1{
@@ -600,10 +601,10 @@ class GameScene: SKScene {
                     while(prev == cNum){
                         cNum = Int.random(in: 1...14)
                     }
-                    let c = Cloud(pY:-400-cloudOffset, cloudNum: cNum, prob:0)
+                    let c = Cloud(pY:(-400 * vScale)-cloudOffset, cloudNum: cNum, prob:0)
                     c.update()
                     clouds.append(c)
-                    cloudOffset = cloudOffset+450
+                    cloudOffset = cloudOffset + (450 * vScale)
                     prev = cNum
                     addChild(c.getSpriteNode())
                     c.getSpriteNode().zPosition = -0.5
@@ -617,13 +618,13 @@ class GameScene: SKScene {
             i+=1
             platform.update()
             
-            if(platform.leftPlatform.sprite.position.y > 1400){
+            if(platform.leftPlatform.sprite.position.y > 1400 * vScale){
                 platforms.remove(at:i)
                 removeChildren(in: platform.getSpriteNode())
                 for _ in 1...1{
-                    let p = Platform(pY:-400-platoffset)
+                    let p = Platform(pY:(-400 * vScale)-platoffset)
                     platforms.append(p)
-                    platoffset = platoffset+450
+                    platoffset = platoffset + (450 * vScale)
                     for pf in p.getSpriteNode(){
                         addChild(pf)
                         pf.zPosition = 1

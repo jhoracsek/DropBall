@@ -10,7 +10,7 @@ import SpriteKit
 
 class Top : Entity{
     
-    var velocity : CGFloat = 0.5
+    var velocity : CGFloat = 0.5 * GameViewController.vScale
     var limit : CGFloat
     var increase : Bool = false
     var boostTimer : Int = 20
@@ -25,7 +25,7 @@ class Top : Entity{
     }
     func increaseVel(){
         //print(velocity)
-        velocity = velocity + 0.01
+        velocity = velocity + 0.01 * GameViewController.vScale
     }
     
     override func update(){
@@ -34,7 +34,7 @@ class Top : Entity{
             boostTimer = 20
         }
         if(increase == true){
-            posY = posY + 3
+            posY = posY + 3 * GameViewController.vScale
             boostTimer = boostTimer - 1
         }else{
             posY = posY - velocity
