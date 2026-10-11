@@ -84,7 +84,7 @@ class Entity {
     /// How far the ball stretches at full speed. 0.16 means 16% taller and correspondingly
     /// narrower. Raise for a more cartoonish feel, lower for a subtler one. Also sets the
     /// depth of the landing squash, so the two stay in proportion.
-    let maxStretch : CGFloat = 0.16
+    let maxStretch : CGFloat = 0.13
 
     /// Sideways speed, in points per frame, at which the horizontal squish reaches full
     /// strength. Not scaled by vScale: the scene is 750 wide on every device, so horizontal
@@ -93,7 +93,7 @@ class Entity {
 
     /// How far the ball flattens when travelling sideways at full tilt. Kept below
     /// maxStretch because sideways motion is a drift rather than a plunge.
-    let maxHorizontalStretch : CGFloat = 0.11
+    let maxHorizontalStretch : CGFloat = 0.15
 
     /// How far below the ball's centre the trail is emitted from, as a fraction of its
     /// height. 0 emits from the centre; 0.5 would be exactly the bottom edge.
