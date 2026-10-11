@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		170CB8AE307B5B5700CC74A5 /* WindStreaks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */; };
+		173F56C3307BEB6700CB6923 /* DebugOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173F56C2307BEB6700CB6923 /* DebugOverlay.swift */; };
 		17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17541947307AC48B00FEAC5F /* SceneDelegate.swift */; };
 		E229529D28BC04A500218A5C /* StartScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = E229529C28BC04A500218A5C /* StartScene.swift */; };
 		E22952A128BC09BD00218A5C /* StartScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = E22952A028BC09BD00218A5C /* StartScene.sks */; };
@@ -59,6 +60,7 @@
 
 /* Begin PBXFileReference section */
 		170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindStreaks.swift; sourceTree = "<group>"; };
+		173F56C2307BEB6700CB6923 /* DebugOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugOverlay.swift; sourceTree = "<group>"; };
 		17541947307AC48B00FEAC5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		E229529C28BC04A500218A5C /* StartScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartScene.swift; sourceTree = "<group>"; };
 		E22952A028BC09BD00218A5C /* StartScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = StartScene.sks; sourceTree = "<group>"; };
@@ -183,6 +185,7 @@
 				E2BF96B32821C65E000A2B9C /* Actions.sks */,
 				17541947307AC48B00FEAC5F /* SceneDelegate.swift */,
 				170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */,
+				173F56C2307BEB6700CB6923 /* DebugOverlay.swift */,
 			);
 			path = DropBall;
 			sourceTree = "<group>";
@@ -344,6 +347,7 @@
 				E2980ADF294C33C900FD8951 /* Score+CoreDataProperties.swift in Sources */,
 				E2E28ACA282733EB001F8935 /* Platform.swift in Sources */,
 				E2BF96E12821F354000A2B9C /* Entity.swift in Sources */,
+				173F56C3307BEB6700CB6923 /* DebugOverlay.swift in Sources */,
 				E2980AD3294BB87400FD8951 /* CoreDataStack.swift in Sources */,
 				E2E28ACC282781FF001F8935 /* mod.swift in Sources */,
 				E2BF96B62821C65E000A2B9C /* GameScene.swift in Sources */,
