@@ -15,16 +15,7 @@ class StartScene: SKScene {
     let offset: CGFloat = -50
 
     let background = SKSpriteNode(imageNamed: "background")
-    
-    let test = SKLabelNode(fontNamed: "Chalkduster")
-    
-    let rectangle = SKShapeNode(rectOf: CGSize(width: 300, height: 150))
-    
-    
-    func testFunc(){print("test")}
-    
-    //let startButton = SKButton(x:0, y:0, unclick:"startbutton", click:"startbuttonclick", test_function: test_func )
-    
+
     var startButton = SKButton(x:0, y:0, unclick:"play", click:"playclick", test_function: {} )
     
     var highscoreButton = SKButton(x:0, y:100, unclick:"highscore", click:"highscoreclick", test_function: {} )
@@ -50,9 +41,9 @@ class StartScene: SKScene {
     override func didMove(to view: SKView) {
         Entity.cameraTranslationY = 0
         Entity.cameraTranslationX = 0
-        //let screen = SKScene.getVisibleScreen(sceneRect: self.scene!.frame, viewRect: self.view!.frame)
+
+        // Clouds 1-6 always appear; the rest show up at random so the menu varies per launch.
         for i in 1...14{
-            //Maybe make every cloud after 7 appear with pr 50 or 60
             let addOffset = CGFloat.random(in: -100...50)
             let isIncluded = Bool.random()
             if (i > 6){
@@ -97,21 +88,19 @@ class StartScene: SKScene {
         }
         
         
-        highscoreButton = SKButton(x:125, y:120+offset, unclick:"highscore", click:"highscoreclick", test_function: test_func )
+        highscoreButton = SKButton(x:125, y:120+offset, unclick:"highscore", click:"highscoreclick", test_function: go_to_highscores )
         
         for i in highscoreButton.getSpriteNode(){
             self.addChild(i)
         }
-        //HEIGHT/2-75
-        settingsButton = //SKButton(x:(WIDTH/2-75), y:-HEIGHT/2+75, unclick:"pause", click:"pause", test_function: go_to_settings )
-                           SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"pause", click:"homebuttonsmall", test_function: go_to_settings )
+
+        settingsButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"pause", click:"homebuttonsmall", test_function: go_to_settings )
         settingsButton.scale(scale: 0.65)
         
         for i in settingsButton.getSpriteNode(){
             self.addChild(i)
         }
         
-        //A little bit of code
         logo.position = CGPoint(x: 0, y:275+offset)
         addChild(logo)
         Entity.cameraTranslationY = 0
@@ -122,8 +111,6 @@ class StartScene: SKScene {
         Entity.cameraTranslationY = 0
         Entity.cameraTranslationX = 0
         if let scene = SKScene(fileNamed: "GameScene") {
-            // Set the scale mode to scale to fit the window
-            //scene.scaleMode = .aspectFill
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
             let reveal = SKTransition.crossFade(withDuration: 0.5)
@@ -131,10 +118,8 @@ class StartScene: SKScene {
         }
     }
     
-    func test_func()->(){
+    func go_to_highscores()->(){
         if let scene = SKScene(fileNamed: "HighscoreScene") {
-            // Set the scale mode to scale to fit the window
-            //scene.scaleMode = .aspectFill
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
             let reveal = SKTransition.crossFade(withDuration: 0.5)
@@ -144,7 +129,6 @@ class StartScene: SKScene {
     
     func go_to_settings(){
         if let scene = SKScene(fileNamed: "SettingsScene") {
-            // Set the scale mode to scale to fit the window
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
             let reveal = SKTransition.crossFade(withDuration: 0.5)
@@ -152,29 +136,7 @@ class StartScene: SKScene {
         }
     }
     
-    func within(pos: CGPoint, origin: CGPoint, rect: CGSize ) -> Bool{
-        let halfWidth = rect.width/2
-        let halfHeight = rect.height/2
-        
-        let boundX1 = origin.x - halfWidth
-        let boundX2 = origin.x + halfWidth
-        
-        let boundY1 = origin.y - halfHeight
-        let boundY2 = origin.y + halfHeight
-        
-        let posX = pos.x
-        let posY = pos.y
-        
-        if posX < boundX1 || posX > boundX2 || posY < boundY1 || posY > boundY2{
-            return false
-        }
-        return true
-    }
-
-    
     func touchDown(atPoint pos : CGPoint) {
-        //print(within(pos:pos, origin:rectangle.position, rect:CGSize(width:300,height:150) )  )
-        //if()
         startButton.checkPressed(pos: pos)
         highscoreButton.checkPressed(pos: pos)
         settingsButton.checkPressed(pos: pos)

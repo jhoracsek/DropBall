@@ -10,43 +10,21 @@ import GameplayKit
 import CoreData
 
 class HighscoreScene: SKScene {
-    //Make an enum state...
-    private var label : SKLabelNode?
-    private var spinnyNode : SKShapeNode?
-    private var xPos : CGFloat = 0
-    private var yPos : CGFloat = 0
-    private var prevX : CGFloat = 0
-    private var xDelta : CGFloat = 0
-    private var yDelta : CGFloat = 0
-    private var score = 0
-    private var sceneNum = 0
-    
     let HEIGHT : CGFloat = GameViewController.HEIGHT
     let WIDTH : CGFloat = GameViewController.WIDTH
-    
-    //let ball = SKSpriteNode(imageNamed: "ball")
-    let top = Top(posY:500)
+
     let background = SKSpriteNode(imageNamed: "background")
-    
     let scoreOverlay = SKSpriteNode(imageNamed: "scoreoverlay")
-    
-    var homeButton = SKButton(x:0, y:100, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: {} )
-    
     let mountains = SKSpriteNode(imageNamed: "mountains")
-    
-    var scrollOffset : CGFloat = 0
-    var iScrollOffset : CGFloat = 0
-    
+
+    var homeButton = SKButton(x:0, y:100, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: {} )
+
+    /// Scroll speed in points per frame, carried over after the finger lifts.
     var velocity : CGFloat = 0
-    
+
+    /// Total height of the score list, used to clamp how far it can be scrolled.
     var offsetMax : CGFloat = 0
 
-    //let platform = Platform(pY: -400)
-    
-    
-    
-    
-    var platforms : [Platform] = []
     var scores = [Score]()
     
     func getScores(){
@@ -55,7 +33,7 @@ class HighscoreScene: SKScene {
         let byScore = NSSortDescriptor(key: #keyPath(Score.score), ascending: false)
         fet.sortDescriptors = [byScore]
         do{
-            let context = (UIApplication.shared.delegate as!AppDelegate).coreDataStack.managedContext
+            let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
             self.scores = try context.fetch(fet)
         } catch let error as NSError{
             print("Fetch error: \(error) description: \(error.userInfo)")
@@ -64,21 +42,13 @@ class HighscoreScene: SKScene {
     
     func go_home(){
         Entity.cameraTranslationY = 0
-        
+
         if let scene = SKScene(fileNamed: "StartScene") {
-            // Set the scale mode to scale to fit the window
-            //scene.scaleMode = .aspectFill
-            Entity.cameraTranslationY = 0
-            //scene.update(0)
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            var reveal = SKTransition.crossFade(withDuration: 0.5)
-            //reveal = SKTransition.flipHorizontal(withDuration: 0.5)
+            let reveal = SKTransition.crossFade(withDuration: 0.5)
             self.view?.presentScene(scene, transition: reveal)
-            //save()
-           
         }
-        
     }
     
     var holder : [ScoreDisplay] = []
@@ -106,12 +76,11 @@ class HighscoreScene: SKScene {
             addChild(child)
         }
         
-        //This should be moved into a different function maybe??
+        // The score rows live inside a crop node so they clip to the overlay panel as they scroll.
         var offset:CGFloat = 0
         let mask = SKSpriteNode(color: SKColor.black, size: CGSize(width: 554, height: 794))
         let cropNode = SKCropNode()
-        
-        
+
         let initial:CGFloat = 330
         for (index, s) in scores.enumerated() {
             let scoreNum = ScoreDisplay(posX:-150, posY:initial+offset)
@@ -119,7 +88,6 @@ class HighscoreScene: SKScene {
             for c in scoreNum.getSpriteNode(){
                 cropNode.addChild(c)
                 c.zPosition = 50
-                
             }
             scoreNum.update()
             indexHolder.append(scoreNum)
@@ -145,104 +113,54 @@ class HighscoreScene: SKScene {
             divider.zPosition = 51
             
             divider.position.y = initial+50+offset
-            
-            //divider.position.y += 50
+
             cropNode.addChild(divider)
             lineHolder.append(divider)
-            /*
-            let shape = SKShapeNode()
-            shape.path = UIBezierPath(roundedRect: CGRect(x: -256, y: 0, width: 512, height: 100), cornerRadius: 32).cgPath
-            //shape.position = CGPoint(x:0,y:500+offset)
-            shape.fillColor = UIColor.lightGray
-            shape.strokeColor = UIColor.darkGray
-            shape.lineWidth = 2
-            //shape.zPosition=10
-            sc.addChild(shape)
-            if index >= 4 {
-                break
-            }
-            */
         }
         offsetMax = offset
         cropNode.position = CGPoint(x:6, y:-51)
         cropNode.maskNode = mask
         addChild(cropNode)
         cropNode.zPosition = 40
-        
-        /*
-        let shape = SKShapeNode()
-        let w = 554
-        let h = 794
-        let xO = 6
-        let yO = -51
-        shape.path = UIBezierPath(roundedRect: CGRect(x: -w/2+xO, y: -h/2+yO, width: w, height: h), cornerRadius: 32).cgPath
-        //shape.position = CGPoint(x:0,y:500+offset)
-        shape.zPosition = 51
-        shape.fillColor = UIColor.lightGray
-        shape.strokeColor = UIColor.darkGray
-        shape.lineWidth = 2
-        addChild(shape)
-        */
+    }
 
-    }
-    
-    func goBack(){
-        if let scene = SKScene(fileNamed: "StartScene") {
-            // Set the scale mode to scale to fit the window
-            //scene.scaleMode = .aspectFill
-            scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
-            scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
-        }
-    }
-    
     var isTouched=false
     var initialPosition:CGFloat = 0
     var difference:CGFloat = 0
     var deaccelerate = false
-    var fingerPosition:CGFloat = 0
     var prevY : CGFloat = 0
     var curY : CGFloat = 0
-    var trail : CGFloat = 0
+
     func touchDown(atPoint pos : CGPoint) {
         homeButton.checkPressed(pos: pos)
-        
+
         initialPosition = pos.y
         isTouched=true
         deaccelerate = false
         prevY = pos.y
         curY = pos.y
     }
-    
-    var up = 0
+
     func touchMoved(toPoint pos : CGPoint) {
         prevY = curY
         curY = pos.y
-        
+
+        // Velocity is the last frame's finger movement, which becomes the fling speed on lift.
         velocity = curY - prevY
-        
-        
-        fingerPosition = pos.y
-        difference = (fingerPosition - initialPosition)
+        difference = (pos.y - initialPosition)
     }
-    
 
     func touchUp(atPoint pos : CGPoint) {
-        //prevY = curY
         curY = pos.y
-        //trail = prevY - curY
-        //trail = 50
         difference=0
         homeButton.unpressed()
-        
+
+        // Bake the dragged position in as the new resting position before coasting starts.
         for i in holder{
-            iScrollOffset = scrollOffset
             i.initPosY = i.posY
             i.update()
         }
         for i in indexHolder{
-            iScrollOffset = scrollOffset
             i.initPosY = i.posY
             i.update()
         }
@@ -254,18 +172,9 @@ class HighscoreScene: SKScene {
         if scores.count == 0{
             return
         }
-        //Now holder should not be empty
-        //print(holder[0].posY)
-        
-        /*
-        if (holder[0].posY + velocity <= 330){
-            var offset:CGFloat = 0
-            let initial:CGFloat = 330
-            return
-        }*/
+
         let d:CGFloat = 2
         if(deaccelerate){
-        
             if(velocity < 1.5/d && velocity > -1.5/d){
                 velocity = 0
                 deaccelerate = false
@@ -281,14 +190,11 @@ class HighscoreScene: SKScene {
             
             for (index, i) in holder.enumerated() {
                 i.posY = i.posY + velocity
-                //lineHolder[index].position.y = i.posY+50
                 if(i.posY >= -offsetMax-420 + offset){
                     i.posY = -offsetMax-420 + offset
-                    //lineHolder[index].position.y = -offsetMax-420 + offset+50
                 }
                 if(i.posY <= initial + offset){
                     i.posY = initial + offset
-                    //lineHolder[index].position.y = initial + offset + 50
                 }
                 lineHolder[index].position.y = i.posY - 50
                 i.initPosY = i.posY
@@ -297,7 +203,7 @@ class HighscoreScene: SKScene {
             offset = 0
             for i in indexHolder{
                 i.posY = i.posY + velocity
-               
+
                 if(i.posY >= -offsetMax-420 + offset){
                     i.posY = -offsetMax-420 + offset
                 }
@@ -306,10 +212,10 @@ class HighscoreScene: SKScene {
                 }
                 i.initPosY = i.posY
                 offset-=100
-                
             }
         }
-        
+
+
         if(isTouched){
             for (index, i) in holder.enumerated() {
                 i.posY = i.initPosY + difference

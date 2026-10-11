@@ -1,5 +1,5 @@
 //
-//  Platform.swift
+//  Cloud.swift
 //  DropBall
 //
 //  Created by Jordan Horacsek on 2022-05-07.
@@ -75,20 +75,19 @@ class Cloud {
         }
         self.posY = pY
         let verticleOffset = CGFloat(Int.random(in: -100...125)) * GameViewController.vScale
-        
 
-        //Default offset should be offscreen.
         offset = CGFloat(Int.random(in:0...200))
-        //let additionalOffset =  CGFloat(Int.random(in:0...400))
-        
+
+        // `prob` is the chance of starting offscreen and drifting in after a cooldown.
+        // The menu passes the default so some clouds are already visible on arrival; the
+        // game passes 0 so every cloud drifts in.
         let randomNum = CGFloat.random(in: 0...1)
         var onScreen = false
-        
+
         if(randomNum >= prob){
             onScreen = true
         }
-        
-        //Should generate a random number between 1 and 14
+
         if(left){
             if(onScreen){
                 coolDown = 0
@@ -97,7 +96,6 @@ class Cloud {
             }else{
                 coolDown = coolDownMax
                 self.cloud = Entity(posX:700+offset, posY:self.posY+verticleOffset, imageNamed:"cloud"+String(cloudNum), falls:false)
-                //self.cloud = Entity(posX:offset + additionalOffset, posY:self.posY+verticleOffset, imageNamed:"cloud"+String(cloudNum), falls:false)
             }
             modVal = -1*(700 + offset)
         }else{
@@ -108,34 +106,21 @@ class Cloud {
             }else{
                 coolDown = coolDownMax
                 self.cloud = Entity(posX:-700-offset, posY:self.posY+verticleOffset, imageNamed:"cloud"+String(cloudNum), falls:false)
-                //self.cloud = Entity(posX:-offset - additionalOffset, posY:self.posY+verticleOffset, imageNamed:"cloud"+String(cloudNum), falls:false)
             }
             modVal = -1*(-700 - offset)
         }
-        
-        
+
         cloud.getSpriteNode().alpha = opacity
         baseY = pY + verticleOffset
-        
-
-        
-        //Might have the scale the cloud
-        //self.cloud.setScale(scale: 4)
-        //Also maybe flip the cloud for more variaty...
-        //self.cloud.strech(sX: 1000)
-        
     }
-    
-    
+
     func getSpriteNode() -> SKSpriteNode{
-        
         return cloud.getSpriteNode()
     }
-    
-    
+
     func update(){
-        //Should move in the direction opposite the side it spawned on...
-        //self.cloud.update()
+        // Clouds drift across the screen in the direction opposite the side they spawned on,
+        // then wrap back and wait out a cooldown before crossing again.
         if(coolDown == 0){
             if (left){
                 if (self.cloud.posX < modVal){
@@ -176,11 +161,8 @@ class Cloud {
             cloud.posY-=wobbleStep
         }
         
+        // Clouds follow the camera at 95% so they parallax slightly against the playfield.
         cloud.sprite.position.x = cloud.posX + Entity.cameraTranslationX
         cloud.sprite.position.y = cloud.posY +  0.95*Entity.cameraTranslationY
-        return
     }
-
-    
-    
 }

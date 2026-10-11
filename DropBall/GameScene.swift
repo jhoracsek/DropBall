@@ -11,24 +11,11 @@ import AudioToolbox
 import CoreData
 
 class GameScene: SKScene {
-    //Make an enum state...
-    private var label : SKLabelNode?
-    private var spinnyNode : SKShapeNode?
-    private var xPos : CGFloat = 0
-    private var yPos : CGFloat = 0
-    private var prevX : CGFloat = 0
-    private var prevY : CGFloat = 0
-    private var xDelta : CGFloat = 0
-    private var yDelta : CGFloat = 0
     private var score = 0
-    private var sceneNum = 0
 
-    //Values which can be changed for testing.
-    let topBarEndsGame = true
+    /// Draws the collision rectangles over the ball and platforms. Development aid only.
     let showHitboxes = false
-    // End testing values.
-    
-    //let ball = SKSpriteNode(imageNamed: "ball")
+
     let ball = Entity(posX:0, posY:0, imageNamed:"ball", falls:true)
     
     let top = Top(posY:500 * GameViewController.vScale)
@@ -56,12 +43,10 @@ class GameScene: SKScene {
     var pauseCooldown = 5
     
     let rumbleOff = UserDefaults.standard.bool(forKey: "RumbleOff")
-    
-    
+
     var platforms : [Platform] = []
     var clouds : [Cloud] = []
-    
-    //Probably deque for platforms and array for platofrms to draw..
+
     var platoffset : CGFloat = 0
     func loadPlatforms(){
         for _ in 1...10{
@@ -73,7 +58,6 @@ class GameScene: SKScene {
     var cloudOffset : CGFloat = (450/2) * GameViewController.vScale
     var prev = -1
     func loadClouds(){
-        
         for _ in 1...10{
             var cNum = Int.random(in: 1...14)
             while(prev == cNum){
@@ -126,80 +110,56 @@ class GameScene: SKScene {
         startButton = SKButton(x:-125, y:-175, unclick:"play", click:"playclick", test_function: reset )
         homeButton = SKButton(x:125, y:-175, unclick:"homebutton", click:"homebutton", test_function: go_home )
         
-        switch sceneNum{
-        case 0:
-            ball.setScale(scale: 0.75)
-            
-            loadPlatforms()
-            loadClouds()
-            top.strech(sX: 750)
-            //addChild(background)
-            //platform.setScale(scaleX: 3, scaleY: 1)
-            ball.getSpriteNode().zPosition = 2
-            addChild(ball.getSpriteNode())
-            addChild(ball.initSecondarySprite())
-            //addChild(ball.initParticles())
-                _ = ball.initParticles()
-            // Now also add the hitbox for the ball
-            if(showHitboxes){
-                addChild(ball.hitbox)
-            }
-                
-            for platform in platforms {
-                if(showHitboxes){
-                    addChild(platform.leftEndCap.hitbox)
-                    addChild(platform.rightEndCap.hitbox)
-                    
-                    platform.leftPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
-                    platform.rightPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
-                    
-                    addChild(platform.leftPlatform.hitbox)
-                    addChild(platform.rightPlatform.hitbox)
-                }
-                for i in platform.getSpriteNode(){
-                    i.zPosition=1
-                    addChild(i)
-                }
-            }
-            for cloud in clouds {
-                let i = cloud.getSpriteNode()
-                i.zPosition = -0.5
-                //i.alpha = 0.5
-                addChild(i)
-                
-            }
+        ball.setScale(scale: 0.75)
 
-            
-            /*
-            test.text = String(score)
-            addChild(test)
-            test.fontSize = 80
-            test.position = CGPoint(x: 0, y:300)
-            test.zPosition=20
-            */
-            
-            for s in scoreDisplay.getSpriteNode(){
-                addChild(s)
-                s.zPosition = 20
-            }
-            
-            addChild(top.getSpriteNode())
-            top.getSpriteNode().zPosition = 10
-            Entity.cameraTranslationY = -ball.posY
-            
-            break
-        default:
-            
-            break
+        loadPlatforms()
+        loadClouds()
+        top.strech(sX: 750)
+        ball.getSpriteNode().zPosition = 2
+        addChild(ball.getSpriteNode())
+        addChild(ball.initSecondarySprite())
+        _ = ball.initParticles()
+
+        if(showHitboxes){
+            addChild(ball.hitbox)
         }
+
+        for platform in platforms {
+            if(showHitboxes){
+                addChild(platform.leftEndCap.hitbox)
+                addChild(platform.rightEndCap.hitbox)
+
+                platform.leftPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
+                platform.rightPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
+
+                addChild(platform.leftPlatform.hitbox)
+                addChild(platform.rightPlatform.hitbox)
+            }
+            for i in platform.getSpriteNode(){
+                i.zPosition=1
+                addChild(i)
+            }
+        }
+        for cloud in clouds {
+            let i = cloud.getSpriteNode()
+            i.zPosition = -0.5
+            addChild(i)
+        }
+
+        for s in scoreDisplay.getSpriteNode(){
+            addChild(s)
+            s.zPosition = 20
+        }
+
+        addChild(top.getSpriteNode())
+        top.getSpriteNode().zPosition = 10
+        Entity.cameraTranslationY = -ball.posY
     }
     
     func reset()->(){
         Entity.cameraTranslationX = 0
         Entity.cameraTranslationY = 0
         if let scene = SKScene(fileNamed: "GameScene") {
-            // Set the scale mode to scale to fit the window
-            //scene.scaleMode = .aspectFill
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
             let reveal = SKTransition.crossFade(withDuration: 0.5)
@@ -213,14 +173,6 @@ class GameScene: SKScene {
     var deaccelerate = false
     
     func touchDown(atPoint pos : CGPoint) {
-            /*
-            if(!gamePaused){
-                if(abs(pos.x - prevX) < 25 ){
-                    //prevX = pos.x
-                }
-            }
-            */
-      
         if(lost_sec){
             startButton.checkPressed(pos: pos)
             homeButton.checkPressed(pos: pos)
@@ -239,30 +191,16 @@ class GameScene: SKScene {
         if(!isTouched){
             initialPosition = pos.x
         }
-        //difference = 0
-        
+
         isTouched=true
         deaccelerate = false
-
     }
     
     func touchMoved(toPoint pos : CGPoint) {
-        //OLD
-        /*
-        if(!gamePaused){
-            if(abs(pos.x - prevX) < 50 ){
-            xDelta = pos.x - prevX
-            ball.moveHorizontally(pX: xDelta)
-            prevX = pos.x
-            }
-        }*/
-        
-        //Should move according to the initial position and the position of the finger.
-        //Speed should be determined by the difference of the position of the finger and the initialPosition.
-        //let ballPosition = ball.sprite.position.x
-        
+        // The ball tracks the distance the finger has travelled from where it first landed,
+        // so the drag distance sets the speed rather than the absolute finger position.
         if(isTouched && abs(pos.x - initialPosition) > 5){
-            // Implement some degree of tolerance.
+            // Ignore tiny movements so a stationary finger doesn't nudge the ball.
             let fingerPosition = pos.x
             ball.fingerPosition = pos.x
             difference = 0.1*(fingerPosition - initialPosition)
@@ -294,12 +232,6 @@ class GameScene: SKScene {
     let holdTolerance: CGFloat = 40
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        /*
-        if let label = self.label {
-            label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
-        }*/
-        
-        
         isTouchForHold = true
         isHolding = false
         
@@ -367,26 +299,17 @@ class GameScene: SKScene {
     }
     
     func save(){
-        let context = (UIApplication.shared.delegate as!AppDelegate).coreDataStack.managedContext
+        let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
         let newScore = Score(context: context)
-        
+
         newScore.name = "None"
         newScore.score = Int64(self.score)
         AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
-        print("Saved context")
-        DispatchQueue.main.async {
-            
-        }
-        
     }
     
     var gameLost = false
     var shake = false
     var shakeDuration = 20
-    
-    func displayOverlay(){
-        
-    }
     
     var scores = [Score]()
     func getScores(){
@@ -395,7 +318,7 @@ class GameScene: SKScene {
         let byScore = NSSortDescriptor(key: #keyPath(Score.score), ascending: false)
         fet.sortDescriptors = [byScore]
         do{
-            let context = (UIApplication.shared.delegate as!AppDelegate).coreDataStack.managedContext
+            let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
             self.scores = try context.fetch(fet)
         } catch let error as NSError{
             print("Fetch error: \(error) description: \(error.userInfo)")
@@ -419,12 +342,12 @@ class GameScene: SKScene {
     }
     
     func lost(){
-        
         save()
-        
         getScores()
-        
-        scoreBest.setScore(score: Int(scores[0].score))
+
+        // save() has just inserted this run's score, so there is normally at least one row.
+        // Fall back to the current score rather than trapping if the fetch comes back empty.
+        scoreBest.setScore(score: Int(scores.first?.score ?? Int64(score)))
         
         for sc in scoreDisplay.getSpriteNode(){
             sc.alpha = 0
@@ -478,15 +401,7 @@ class GameScene: SKScene {
             }
             scoreFinal.update()
         }
-        
-        /*
-        removeChildren(in:scoreDisplay.getSpriteNode())
-        scoreDisplay.addScore()
-        for s in scoreDisplay.getSpriteNode(){
-            addChild(s)
-            s.zPosition = 20
-        }
-        */
+
         for child in scoreFinal.getSpriteNode(){
             child.alpha = 1
         }
@@ -510,27 +425,18 @@ class GameScene: SKScene {
     
     func go_home(){
         Entity.cameraTranslationY = 0
-        
+
         if let scene = SKScene(fileNamed: "StartScene") {
-            // Set the scale mode to scale to fit the window
-            //scene.scaleMode = .aspectFill
-            Entity.cameraTranslationY = 0
-            //scene.update(0)
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            var reveal = SKTransition.crossFade(withDuration: 0.5)
-            //reveal = SKTransition.flipHorizontal(withDuration: 0.5)
+            let reveal = SKTransition.crossFade(withDuration: 0.5)
             self.view?.presentScene(scene, transition: reveal)
-            //save()
-           
         }
-        
     }
     
     override func update(_ currentTime: TimeInterval) {
-        /*
-         For Testing
-         */
+        // Holding the screen makes the ball fall faster. The hitbox tint is only visible
+        // when showHitboxes is on, and marks which of the two states is active.
         if(isHolding){
             ball.hitbox.color = SKColor.init(red: 0.0, green: 0, blue: 1, alpha: 0.5)
             ball.speedAcc()
@@ -538,7 +444,6 @@ class GameScene: SKScene {
             ball.hitbox.color = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
             ball.slowAcc()
         }
-        //print(ball.cooldownTimer)
         
         if(gameLost){
             ball.falls = false
@@ -561,15 +466,10 @@ class GameScene: SKScene {
             if (pauseCooldown != 0){
                 pauseCooldown -= 1
             }
-            //pauseButton.update()
-            //print(difference)
             return
         }
         pauseText.alpha = 0
-        
-        
-        
-        
+
         if(deaccelerate){
             if(difference < 0.1 && difference > -0.1){
                 difference = 0
@@ -582,9 +482,7 @@ class GameScene: SKScene {
             }
         }
         ball.posX += difference
-        
-       
-        
+
         top.update()
         var isHit = false
         
@@ -597,21 +495,19 @@ class GameScene: SKScene {
             if(cloud.cloud.sprite.position.y > 1400 * vScale){
                 clouds.removeAll { $0 === cloud }
                 removeChildren(in: [cloud.getSpriteNode()])
-                for _ in 1...1{
-                    var cNum = Int.random(in: 1...14)
-                    while(prev == cNum){
-                        cNum = Int.random(in: 1...14)
-                    }
-                    let c = Cloud(pY:(-400 * vScale)-cloudOffset, cloudNum: cNum, prob:0)
-                    c.update()
-                    clouds.append(c)
-                    cloudOffset = cloudOffset + (450 * vScale)
-                    prev = cNum
-                    addChild(c.getSpriteNode())
-                    c.getSpriteNode().zPosition = -0.5
+
+                var cNum = Int.random(in: 1...14)
+                while(prev == cNum){
+                    cNum = Int.random(in: 1...14)
                 }
+                let c = Cloud(pY:(-400 * vScale)-cloudOffset, cloudNum: cNum, prob:0)
+                c.update()
+                clouds.append(c)
+                cloudOffset = cloudOffset + (450 * vScale)
+                prev = cNum
+                addChild(c.getSpriteNode())
+                c.getSpriteNode().zPosition = -0.5
             }
-            
         }
         ball.update()
         // Same stale-index hazard as the cloud loop above: remove by identity, not position.
@@ -623,14 +519,13 @@ class GameScene: SKScene {
             if(platform.leftPlatform.sprite.position.y > 1400 * vScale){
                 platforms.removeAll { $0 === platform }
                 removeChildren(in: platform.getSpriteNode())
-                for _ in 1...1{
-                    let p = Platform(pY:(-400 * vScale)-platoffset)
-                    platforms.append(p)
-                    platoffset = platoffset + (450 * vScale)
-                    for pf in p.getSpriteNode(){
-                        addChild(pf)
-                        pf.zPosition = 1
-                    }
+
+                let p = Platform(pY:(-400 * vScale)-platoffset)
+                platforms.append(p)
+                platoffset = platoffset + (450 * vScale)
+                for pf in p.getSpriteNode(){
+                    addChild(pf)
+                    pf.zPosition = 1
                 }
                 continue
             }
@@ -638,15 +533,16 @@ class GameScene: SKScene {
                 if(ball.isColliding(obj: platform.pass)){
                     platform.passed = true
                     score = score + 1
-                    //Update scoreDisplay
+
+                    // The score is drawn from per-digit sprites, so a new digit count means
+                    // rebuilding the whole display rather than editing a label.
                     removeChildren(in:scoreDisplay.getSpriteNode())
                     scoreDisplay.addScore()
                     for s in scoreDisplay.getSpriteNode(){
                         addChild(s)
                         s.zPosition = 20
                     }
-                    
-                    
+
                     top.boost()
                     top.increaseVel()
                 }
@@ -667,13 +563,10 @@ class GameScene: SKScene {
         }
         
         scoreDisplay.update()
-        //top.setPos(pY: ball.posY+400)
-        //background.position.y = 767-(ball.truePosY)*0.01
+
+        // The background drifts at a fraction of the ball's fall speed for a parallax effect.
         background.position.y = GameViewController.HEIGHT/2 + 100 - (ball.truePosY)*0.01
-        
+
         Entity.cameraTranslationY = -ball.posY
-        
-        //ball.position = CGPoint(x:xPos,y:yPos)
-        
     }
 }

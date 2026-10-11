@@ -9,10 +9,6 @@ import UIKit
 import SpriteKit
 import GameplayKit
 
-var gameScene = SKScene(fileNamed: "StartScene")
-
-
-
 class GameViewController: UIViewController {
     
     static var HEIGHT : CGFloat = 1624.0
@@ -40,38 +36,19 @@ class GameViewController: UIViewController {
             GameViewController.HEIGHT = 1334.0
             GameViewController.WIDTH = 750.0
         }
-        //2.163551401869159
         super.viewDidLoad()
         
         AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
         
-        if let view = self.view as! SKView? {
-            // Load the SKScene from 'GameScene.sks'
-            //print(mod(-50,500))
-            
-            view.ignoresSiblingOrder = true;
-            view.shouldCullNonVisibleNodes = true;
-           
+        if let view = self.view as? SKView {
+            view.ignoresSiblingOrder = true
+            view.shouldCullNonVisibleNodes = true
+
             if let scene = SKScene(fileNamed: "StartScene") {
-                // Set the scale mode to scale to fit the window
-                //scene.scaleMode = .aspectFill
-                //scene.size = CGSize(width:750.0, height:1334.0)
-                
                 scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
                 scene.scaleMode = .aspectFill
-                //scene.scaleMode = .aspectFit
-                
-                //print(scene.size)
-                // Present the scene
                 view.presentScene(scene)
             }
-            /*
-            let scene = GameScene(size: CGSize(width:1000, height:1000))
-            scene.scaleMode = .aspectFill
-            view.presentScene(scene)
-            */
-            
-            view.ignoresSiblingOrder = true
 
             // Debug overlays are useful while developing but must never reach a release build.
             #if DEBUG
@@ -79,7 +56,6 @@ class GameViewController: UIViewController {
             view.showsNodeCount = true
             #endif
         }
-        
     }
 
     override var shouldAutorotate: Bool {

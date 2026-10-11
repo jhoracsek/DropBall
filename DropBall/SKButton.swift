@@ -76,6 +76,9 @@ class SKButton {
         self.clickedSprite.zPosition = 29
     }
 
+    /// Returns whether the press landed on this button. Most callers just want the side
+    /// effect, so the result is discardable.
+    @discardableResult
     func checkPressed(pos:CGPoint)->Bool{
         if within(pos:pos){
             pressed()
@@ -96,18 +99,13 @@ class SKButton {
     }
     
     func toggleDisable(){
-        //ZPosition adjustment...
         disabled = !disabled
         if(disabled){
             self.unclickedSprite.alpha = 0
             self.clickedSprite.alpha = 0
-            //self.unclickedSprite.zPosition = -30
-            //self.clickedSprite.zPosition = -29
         }else{
             self.unclickedSprite.alpha = 1
             self.clickedSprite.alpha = 1
-            //self.unclickedSprite.zPosition = 30
-            //self.clickedSprite.zPosition = 29
         }
     }
     
@@ -120,10 +118,4 @@ class SKButton {
     func getSpriteNode() -> [SKSpriteNode]{
         return [unclickedSprite, clickedSprite]
     }
-    
-    func update(){
-        
-    }
-    
-    
 }

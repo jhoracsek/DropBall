@@ -1,5 +1,5 @@
 //
-//  Entity.swift
+//  ScoreDisplay.swift
 //  DropBall
 //
 //  Created by Jordan Horacsek on 2022-05-03.
@@ -8,25 +8,20 @@
 import Foundation
 import SpriteKit
 
+/// Renders a number as a row of per-digit sprites, since the game uses custom digit art
+/// rather than a font.
 class ScoreDisplay {
     var posX : CGFloat
     var posY : CGFloat
     var initPosY : CGFloat
-    
-    //var height : CGFloat
-    //var width : CGFloat
-    
+
     var sprites : [SKSpriteNode]
-    static var cameraTranslationX : CGFloat = 0
-    static var cameraTranslationY : CGFloat = 0
 
     var score: Int = 0
-    
+
+    /// Scales the digit art; 1 is the in-game HUD size, 0.5 the smaller lose-screen size.
     var factor : CGFloat = 1
-    
-    
-    
-    
+
     init(posX: CGFloat, posY: CGFloat, factor: CGFloat = 1){
         self.posX = posX
         self.posY = posY
@@ -34,9 +29,7 @@ class ScoreDisplay {
         self.sprites = [];
         self.sprites.append(SKSpriteNode(imageNamed: "0"))
         self.factor = factor
-        //self.height = sprite.size.height
-        //self.width = sprite.size.width
-        
+
         var scaling = CGSize()
         scaling.width = 64*factor
         scaling.height = 64*factor
@@ -46,7 +39,6 @@ class ScoreDisplay {
     func addScore(){
         score+=1
         updateSprite()
-        
     }
     
     func setScore(score: Int){
@@ -94,25 +86,10 @@ class ScoreDisplay {
     }
     
     
-    //testing function
-    func setPos(pX: CGFloat, pY: CGFloat){
-        posX=pX
-        posY=pY
-        
-        return
-    }
-    
-    func setPos(pY: CGFloat){
-        posY=pY
-        return
-    }
-
-    
     func getSpriteNode() -> [SKSpriteNode]{
         return sprites
     }
 
-    
     func update(){
         let switchNum: Int = score/10
         if(switchNum == 0){
@@ -135,7 +112,5 @@ class ScoreDisplay {
             sprites[2].position.x = posX+50*factor
             sprites[2].position.y = posY
         }
-        
-        return
     }
 }

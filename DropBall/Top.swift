@@ -16,15 +16,17 @@ class Top : Entity{
     var boostTimer : Int = 20
     
     init(posY: CGFloat){
-        //init(posX: CGFloat, posY: CGFloat, imageNamed: String, falls: Bool)
         self.limit = posY
         super.init(posX:0, posY: posY, imageNamed: "line", falls: false)
     }
+
+    /// Nudges the line back up briefly, as a reward for clearing a platform.
     func boost(){
         increase = true
     }
+
+    /// Makes the line creep down faster, so the game speeds up as the score climbs.
     func increaseVel(){
-        //print(velocity)
         velocity = velocity + 0.01 * GameViewController.vScale
     }
     
@@ -40,7 +42,5 @@ class Top : Entity{
             posY = posY - velocity
         }
         sprite.position.y = posY
-        return
     }
-    
 }

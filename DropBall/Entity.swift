@@ -51,7 +51,6 @@ class Entity {
     var spriteName: String?
     
     var particles: SKEmitterNode?
-    var hasParticles = false
     var fingerPosition: CGFloat =  0
     
     
@@ -86,20 +85,6 @@ class Entity {
         hitbox.position.y = posY + Entity.cameraTranslationY
         hitbox.zPosition = 5
     }
-    /*
-     
-     func setScale(scale: CGFloat){
-         var scaling = CGSize()
-         scaling.width = scale * self.width
-         scaling.height = scale * self.height
-         sprite.size = scaling
-         
-         self.height = sprite.size.height
-         self.width = sprite.size.width
-         
-         return
-     }
-     */
     func initParticles() -> SKEmitterNode?{
         // SKEmitterNode(fileNamed:) replaces the deprecated NSKeyedUnarchiver path, and
         // returns nil rather than trapping if the .sks is ever missing from the bundle.
@@ -107,32 +92,27 @@ class Entity {
             return nil
         }
 
-        hasParticles = true
         particles = emitter
 
         emitter.position = self.sprite.position
         emitter.name = "sparkEmitter"
-        //emitter.targetNode = self.sprite
         emitter.particleZPosition = -1
-        //emitter.zPosition = -100
-        
+
         self.sprite.addChild(emitter)
-        //self.secondarySprite!.addChild(emitter)
         return emitter
     }
-    
-    
+
+    /// The world wraps horizontally, so the ball is drawn a second time one screen width
+    /// away. That way it is already visible on the far edge as it crosses the seam.
     func initSecondarySprite() -> SKSpriteNode{
         hasSecondarySprite = true
-        
-        
+
         secondarySprite = SKSpriteNode(imageNamed: spriteName ?? "ball")
-        
+
         secondarySprite?.position.x = posX + 10
         secondarySprite?.position.y = posY
         secondarySprite?.zPosition = 2
-        
-        
+
         var scaling = CGSize()
         scaling.width = sprite.size.height
         scaling.height = sprite.size.width
@@ -218,30 +198,10 @@ class Entity {
         return false;
     }
     
-    //testing function
-    func setPos(pX: CGFloat, pY: CGFloat){
-        posX=pX
-        posY=pY
-        
-        return
-    }
-    
-    func setPos(pY: CGFloat){
-        posY=pY
-        return
-    }
-    
-    func moveHorizontally(pX: CGFloat){
-        posX=posX+pX
-        return
-    }
-    
     func getSpriteNode() -> SKSpriteNode{
         return sprite
     }
-    
-    //var cAcc = -1
-    //var yVel = 0
+
     func falling(){
         if(falls){
             if(hitGround == false){
@@ -249,12 +209,8 @@ class Entity {
                 posY = posY + yVel
                 truePosY = truePosY + yVel
             }else{
-                /*  What I probably need to do here is just take the sign on the previous velocity
-                    and make set it to (sign)*C where C is some constant velocity. This will ensure
-                    that the ball always bounces to the same height. */
-                
-                
-                // You can add some value here that sets a cooldown for the pushDown function.
+                // Landing always sets the same upward velocity rather than reflecting the
+                // impact speed, so every bounce reaches the same height.
                 yVel = 11 * GameViewController.vScale
             }
         }
@@ -266,13 +222,12 @@ class Entity {
         }
     }
     
+    /// Steepens gravity while the player holds the screen, but only on the way down —
+    /// velocity is negative when falling and positive when rising.
     func speedAcc(){
-        // Dependent on the velocity!
-        // When falling: Velocity is negative. When rising (moving up): Velocity is positive.
         if(yVel < 0){
-            //cAcc = -0.420
             cAcc = -0.490 * GameViewController.vScale
-            particles?.particleBirthRate = 100//abs(yVel)*10
+            particles?.particleBirthRate = 100
         }else{
             cAcc = -0.220 * GameViewController.vScale
             particles?.particleBirthRate = 0
@@ -330,31 +285,26 @@ class Entity {
         return
     }
     
-    /*
-    func setCameraTransY(){
-        cameraTranslationY
-        return
-    }*/
     func checkCollision(){
         if(cooldownTimer > 0){
             cooldownTimer = cooldownTimer - 1;
         }
     }
     
+    /// Width of the wrap-around world, in scene units.
     let moveSize:CGFloat = 770
-    var prevX = Entity.cameraTranslationX
+
     func update(){
-        //sprite.position.x = mod(posX + Entity.cameraTranslationX, 750)
+        // Only the ball wraps; platforms and clouds hold a fixed world position.
         if(falls){
             posX = remainder(posX, moveSize)
         }
-        
-        //sprite.position.x = posX + Entity.cameraTranslationX
+
         sprite.position.x = posX + Entity.cameraTranslationX
         sprite.position.y = posY + Entity.cameraTranslationY
-        
+
+        // Draw the wrap-around copy on whichever side the ball is heading towards.
         if(hasSecondarySprite){
-            //posX = remainder(posX, 750)
             if(posX > 0){
                 secondarySprite?.position.x = posX - moveSize + Entity.cameraTranslationX
                 secondarySprite?.position.y = posY + Entity.cameraTranslationY
@@ -363,21 +313,7 @@ class Entity {
                 secondarySprite?.position.y = posY + Entity.cameraTranslationY
             }
         }
-        
-        if(hasParticles){
-            //particles?.position.x = posX + Entity.cameraTranslationX
-            //particles?.position.y = posY + Entity.cameraTranslationY
-            // Make the particles trail slightly.
-            //particles?.position.x = posX + Entity.cameraTranslationX//prevX
-            //particles?.position.y = posY + Entity.cameraTranslationY
-        }
-        prevX = posX + Entity.cameraTranslationX
-        //self.xBound[0] = (posX - width/2) + reduction
-        //self.xBound[1] = (posX + width/2) - reduction
-        
-        //self.yBound[0] = (posY - height/2) + reduction
-        //self.yBound[1] = (posY + height/2) - reduction
-        
+
         self.xBound[0] = (posX - (width/2)*reductionX)
         self.xBound[1] = (posX + (width/2)*reductionX)
         
@@ -389,10 +325,7 @@ class Entity {
 
         hitbox.size.width = width*reductionX
         hitbox.size.height = height*reductionY
-        
-        
+
         falling()
-        
-        return
     }
 }
