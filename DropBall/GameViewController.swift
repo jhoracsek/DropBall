@@ -72,9 +72,12 @@ class GameViewController: UIViewController {
             */
             
             view.ignoresSiblingOrder = true
-            
+
+            // Debug overlays are useful while developing but must never reach a release build.
+            #if DEBUG
             view.showsFPS = true
             view.showsNodeCount = true
+            #endif
         }
         
     }
@@ -83,12 +86,10 @@ class GameViewController: UIViewController {
         return false
     }
 
+    // The scene is a fixed-width portrait layout, so every orientation other than portrait
+    // crops the playfield. Keep this in sync with UISupportedInterfaceOrientations in Info.plist.
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            return .allButUpsideDown
-        } else {
-            return .all
-        }
+        return .portrait
     }
 
     override var prefersStatusBarHidden: Bool {

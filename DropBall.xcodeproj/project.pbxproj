@@ -535,7 +535,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.toastedwalnuts.DropBall;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -555,7 +555,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.toastedwalnuts.DropBall;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -576,7 +576,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.toastedwalnuts.DropBallTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DropBall.app/DropBall";
 			};
 			name = Debug;
@@ -598,7 +598,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.toastedwalnuts.DropBallTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DropBall.app/DropBall";
 			};
 			name = Release;
@@ -619,7 +619,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.toastedwalnuts.DropBallUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = DropBall;
 			};
 			name = Debug;
@@ -640,7 +640,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.toastedwalnuts.DropBallUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = DropBall;
 			};
 			name = Release;

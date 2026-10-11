@@ -100,22 +100,25 @@ class Entity {
          return
      }
      */
-    func initParticles() -> SKEmitterNode{
+    func initParticles() -> SKEmitterNode?{
+        // SKEmitterNode(fileNamed:) replaces the deprecated NSKeyedUnarchiver path, and
+        // returns nil rather than trapping if the .sks is ever missing from the bundle.
+        guard let emitter = SKEmitterNode(fileNamed: "Particle") else {
+            return nil
+        }
+
         hasParticles = true
+        particles = emitter
+
+        emitter.position = self.sprite.position
+        emitter.name = "sparkEmitter"
+        //emitter.targetNode = self.sprite
+        emitter.particleZPosition = -1
+        //emitter.zPosition = -100
         
-        let mainBundle = Bundle.main
-        let sparkEmitterPath = mainBundle.path(forResource: "Particle", ofType: "sks")
-        particles = NSKeyedUnarchiver.unarchiveObject(withFile: sparkEmitterPath!) as! SKEmitterNode
-        
-        particles!.position = self.sprite.position
-        particles!.name = "sparkEmitter"
-        //particles!.targetNode = self.sprite
-        particles!.particleZPosition = -1
-        //particles!.zPosition = -100
-        
-        self.sprite.addChild(particles!)
-        //self.secondarySprite!.addChild(particles!)
-        return particles!
+        self.sprite.addChild(emitter)
+        //self.secondarySprite!.addChild(emitter)
+        return emitter
     }
     
     
@@ -269,16 +272,16 @@ class Entity {
         if(yVel < 0){
             //cAcc = -0.420
             cAcc = -0.490 * GameViewController.vScale
-            particles!.particleBirthRate = 100//abs(yVel)*10
+            particles?.particleBirthRate = 100//abs(yVel)*10
         }else{
             cAcc = -0.220 * GameViewController.vScale
-            particles!.particleBirthRate = 0
+            particles?.particleBirthRate = 0
         }
     }
     
     func slowAcc(){
         cAcc = -0.220 * GameViewController.vScale
-        particles!.particleBirthRate = 0
+        particles?.particleBirthRate = 0
     }
     
     func setHitGroud(val: Bool){

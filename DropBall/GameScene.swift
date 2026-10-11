@@ -139,7 +139,7 @@ class GameScene: SKScene {
             addChild(ball.getSpriteNode())
             addChild(ball.initSecondarySprite())
             //addChild(ball.initParticles())
-                ball.initParticles()
+                _ = ball.initParticles()
             // Now also add the hitbox for the ball
             if(showHitboxes){
                 addChild(ball.hitbox)
@@ -588,13 +588,14 @@ class GameScene: SKScene {
         top.update()
         var isHit = false
         
-        var j = -1
+        // `clouds` is mutated below while this loop walks a snapshot of it, so a positional
+        // index would go stale after the first removal and delete the wrong cloud. Removing
+        // by identity is correct no matter how many are recycled in a single frame.
         for cloud in clouds {
-            j+=1
             cloud.update()
 
             if(cloud.cloud.sprite.position.y > 1400 * vScale){
-                clouds.remove(at:j)
+                clouds.removeAll { $0 === cloud }
                 removeChildren(in: [cloud.getSpriteNode()])
                 for _ in 1...1{
                     var cNum = Int.random(in: 1...14)
@@ -613,13 +614,14 @@ class GameScene: SKScene {
             
         }
         ball.update()
-        var i = -1
+        // Same stale-index hazard as the cloud loop above: remove by identity, not position.
+        // A mis-indexed removal left a platform in the array with its sprites already
+        // detached from the scene, so the ball could still die on an invisible end cap.
         for platform in platforms {
-            i+=1
             platform.update()
             
             if(platform.leftPlatform.sprite.position.y > 1400 * vScale){
-                platforms.remove(at:i)
+                platforms.removeAll { $0 === platform }
                 removeChildren(in: platform.getSpriteNode())
                 for _ in 1...1{
                     let p = Platform(pY:(-400 * vScale)-platoffset)
