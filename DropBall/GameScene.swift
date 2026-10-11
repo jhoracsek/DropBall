@@ -33,7 +33,13 @@ class GameScene: SKScene {
     var startButton = SKButton(x:0, y:0, unclick:"play", click:"playclick", test_function: {} )
     var homeButton = SKButton(x:0, y:0, unclick:"homebutton", click:"homebutton", test_function: {} )
     
-    var gamePaused = false
+    var gamePaused = false {
+        didSet {
+            // Driven from here rather than from the pause and resume button closures so
+            // that any future path which pauses the game is covered automatically.
+            ball.setEffectsPaused(gamePaused)
+        }
+    }
     
     let scoreDisplay = ScoreDisplay(posX:0, posY:300)
     
@@ -118,7 +124,8 @@ class GameScene: SKScene {
         ball.getSpriteNode().zPosition = 2
         addChild(ball.getSpriteNode())
         addChild(ball.initSecondarySprite())
-        _ = ball.initParticles()
+        ball.initParticles(in: self)
+        ball.initWind(in: self)
 
         if(showHitboxes){
             addChild(ball.hitbox)
@@ -342,6 +349,8 @@ class GameScene: SKScene {
     }
     
     func lost(){
+        ball.stopEffects()
+
         save()
         getScores()
 
@@ -435,16 +444,6 @@ class GameScene: SKScene {
     }
     
     override func update(_ currentTime: TimeInterval) {
-        // Holding the screen makes the ball fall faster. The hitbox tint is only visible
-        // when showHitboxes is on, and marks which of the two states is active.
-        if(isHolding){
-            ball.hitbox.color = SKColor.init(red: 0.0, green: 0, blue: 1, alpha: 0.5)
-            ball.speedAcc()
-        }else{
-            ball.hitbox.color = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
-            ball.slowAcc()
-        }
-        
         if(gameLost){
             ball.falls = false
             if(shake){
@@ -469,6 +468,18 @@ class GameScene: SKScene {
             return
         }
         pauseText.alpha = 0
+
+        // Holding the screen makes the ball fall faster. The hitbox tint is only visible
+        // when showHitboxes is on, and marks which of the two states is active. Evaluated
+        // after the pause and lose checks, so a finger still down while the game is stopped
+        // doesn't count as a boost.
+        if(isHolding){
+            ball.hitbox.color = SKColor.init(red: 0.0, green: 0, blue: 1, alpha: 0.5)
+            ball.speedAcc()
+        }else{
+            ball.hitbox.color = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
+            ball.slowAcc()
+        }
 
         if(deaccelerate){
             if(difference < 0.1 && difference > -0.1){

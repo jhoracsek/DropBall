@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		170CB8AE307B5B5700CC74A5 /* WindStreaks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */; };
 		17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17541947307AC48B00FEAC5F /* SceneDelegate.swift */; };
 		E229529D28BC04A500218A5C /* StartScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = E229529C28BC04A500218A5C /* StartScene.swift */; };
 		E22952A128BC09BD00218A5C /* StartScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = E22952A028BC09BD00218A5C /* StartScene.sks */; };
@@ -57,6 +58,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindStreaks.swift; sourceTree = "<group>"; };
 		17541947307AC48B00FEAC5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		E229529C28BC04A500218A5C /* StartScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartScene.swift; sourceTree = "<group>"; };
 		E22952A028BC09BD00218A5C /* StartScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = StartScene.sks; sourceTree = "<group>"; };
@@ -180,6 +182,7 @@
 				E269D1DC295EECEF00ED3735 /* Cloud.swift */,
 				E2BF96B32821C65E000A2B9C /* Actions.sks */,
 				17541947307AC48B00FEAC5F /* SceneDelegate.swift */,
+				170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */,
 			);
 			path = DropBall;
 			sourceTree = "<group>";
@@ -349,6 +352,7 @@
 				E269D1D9295E8BED00ED3735 /* ScoreDisplay.swift in Sources */,
 				E2980ADE294C33C900FD8951 /* Score+CoreDataClass.swift in Sources */,
 				E269D1DB295ED64600ED3735 /* SinglePlatform.swift in Sources */,
+				170CB8AE307B5B5700CC74A5 /* WindStreaks.swift in Sources */,
 				E2BF96B02821C65E000A2B9C /* AppDelegate.swift in Sources */,
 				E2604EAD2EBE6B14003AA4DD /* SettingsScene.swift in Sources */,
 				E25FA55F2828760E002833D4 /* Top.swift in Sources */,
