@@ -75,6 +75,7 @@ class StartScene: SKScene {
         
         addChild(ball.getSpriteNode())
         ball.setScale(scale: 0.75)
+        ball.isCircular = true
         ball.update()
         
         addChild(platform.getSpriteNode()[0])

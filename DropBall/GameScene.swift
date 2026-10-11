@@ -13,8 +13,22 @@ import CoreData
 class GameScene: SKScene {
     private var score = 0
 
-    /// Draws the collision rectangles over the ball and platforms. Development aid only.
-    let showHitboxes = false
+    /// Draws the collision shapes over the ball and platforms. Development aid only;
+    /// toggled at runtime from the debug panel in debug builds.
+    var showHitboxes = false {
+        didSet {
+            guard showHitboxes != oldValue else { return }
+            refreshHitboxes()
+        }
+    }
+
+    /// When false the ball passes through end caps and the top bar without dying. It still
+    /// lands on platforms, so the game stays playable while you watch something else.
+    var collisionsLethal = true
+
+    #if DEBUG
+    private var debugOverlay: DebugOverlay?
+    #endif
 
     let ball = Entity(posX:0, posY:0, imageNamed:"ball", falls:true)
     
@@ -127,21 +141,14 @@ class GameScene: SKScene {
         ball.initParticles(in: self)
         ball.initWind(in: self)
 
+        ball.isCircular = true
+
         if(showHitboxes){
-            addChild(ball.hitbox)
+            addChild(ball.debugHitboxNode())
         }
 
         for platform in platforms {
-            if(showHitboxes){
-                addChild(platform.leftEndCap.hitbox)
-                addChild(platform.rightEndCap.hitbox)
-
-                platform.leftPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
-                platform.rightPlatform.hitbox.color = SKColor.init(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
-
-                addChild(platform.leftPlatform.hitbox)
-                addChild(platform.rightPlatform.hitbox)
-            }
+            addHitboxes(for: platform)
             for i in platform.getSpriteNode(){
                 i.zPosition=1
                 addChild(i)
@@ -161,8 +168,77 @@ class GameScene: SKScene {
         addChild(top.getSpriteNode())
         top.getSpriteNode().zPosition = 10
         Entity.cameraTranslationY = -ball.posY
+
+        #if DEBUG
+        setUpDebugOverlay()
+        #endif
     }
+
+    #if DEBUG
+    private func setUpDebugOverlay(){
+        let overlay = DebugOverlay(in: self, sceneSize: CGSize(width: WIDTH, height: HEIGHT))
+
+        overlay.addToggle("Hitboxes", isOn: showHitboxes) { [weak self] isOn in
+            self?.showHitboxes = isOn
+        }
+        overlay.addToggle("Invincible", isOn: !collisionsLethal) { [weak self] isOn in
+            self?.collisionsLethal = !isOn
+        }
+
+        debugOverlay = overlay
+    }
+    #endif
     
+    // Debug overlay colours, so the three kinds of hitbox are distinguishable at a glance.
+    private static let platformHitboxColor = SKColor(red: 1.0, green: 0.7, blue: 0.1, alpha: 0.85)
+    private static let endCapHitboxColor = SKColor(red: 1.0, green: 0.2, blue: 0.2, alpha: 0.6)
+    private static let passHitboxColor = SKColor(red: 0.3, green: 0.9, blue: 1.0, alpha: 0.5)
+
+    /// Every hitbox belonging to a platform, including `pass` — the scoring trigger, which
+    /// has no sprite of its own and so is otherwise impossible to see.
+    private func hitboxNodes(for platform: Platform) -> [SKNode] {
+        return [platform.leftPlatform, platform.rightPlatform,
+                platform.leftEndCap, platform.rightEndCap,
+                platform.pass].map { $0.debugHitboxNode() }
+    }
+
+    /// Platforms are recycled as they scroll off, so this runs for each new one rather than
+    /// only at setup — otherwise the overlay would vanish after the first ten.
+    private func addHitboxes(for platform: Platform){
+        guard showHitboxes else { return }
+
+        platform.leftPlatform.setHitboxColor(GameScene.platformHitboxColor)
+        platform.rightPlatform.setHitboxColor(GameScene.platformHitboxColor)
+        platform.leftEndCap.setHitboxColor(GameScene.endCapHitboxColor)
+        platform.rightEndCap.setHitboxColor(GameScene.endCapHitboxColor)
+        platform.pass.setHitboxColor(GameScene.passHitboxColor)
+
+        for node in hitboxNodes(for: platform) {
+            addChild(node)
+        }
+    }
+
+    /// No `showHitboxes` guard: this also runs when the toggle is switched *off*, and
+    /// removing nodes that aren't children is a harmless no-op.
+    private func removeHitboxes(for platform: Platform){
+        removeChildren(in: hitboxNodes(for: platform))
+    }
+
+    /// Adds or removes the whole overlay at once, for when the debug toggle flips mid-run.
+    private func refreshHitboxes(){
+        if showHitboxes {
+            addChild(ball.debugHitboxNode())
+            for platform in platforms {
+                addHitboxes(for: platform)
+            }
+        } else {
+            removeChildren(in: [ball.debugHitboxNode()])
+            for platform in platforms {
+                removeHitboxes(for: platform)
+            }
+        }
+    }
+
     func reset()->(){
         Entity.cameraTranslationX = 0
         Entity.cameraTranslationY = 0
@@ -239,6 +315,15 @@ class GameScene: SKScene {
     let holdTolerance: CGFloat = 40
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // Checked before anything else so a toggle tap never starts a hold or nudges the
+        // ball. Compiled out entirely in release.
+        #if DEBUG
+        if let point = touches.first?.location(in: self),
+           debugOverlay?.handleTouch(at: point) == true {
+            return
+        }
+        #endif
+
         isTouchForHold = true
         isHolding = false
         
@@ -349,6 +434,11 @@ class GameScene: SKScene {
     }
     
     func lost(){
+        // Two different checks can fail in the same frame — an end cap and the top bar —
+        // and without this each would save a score and stack another set of buttons.
+        guard !gameLost else { return }
+        gameLost = true
+
         ball.stopEffects()
 
         save()
@@ -361,7 +451,6 @@ class GameScene: SKScene {
         for sc in scoreDisplay.getSpriteNode(){
             sc.alpha = 0
         }
-        gameLost=true
         shake=true
         pauseButton.disable()
         resumeButton.disable()
@@ -469,15 +558,11 @@ class GameScene: SKScene {
         }
         pauseText.alpha = 0
 
-        // Holding the screen makes the ball fall faster. The hitbox tint is only visible
-        // when showHitboxes is on, and marks which of the two states is active. Evaluated
-        // after the pause and lose checks, so a finger still down while the game is stopped
-        // doesn't count as a boost.
+        // Holding the screen makes the ball fall faster. Evaluated after the pause and lose
+        // checks, so a finger still down while the game is stopped doesn't count as a boost.
         if(isHolding){
-            ball.hitbox.color = SKColor.init(red: 0.0, green: 0, blue: 1, alpha: 0.5)
             ball.speedAcc()
         }else{
-            ball.hitbox.color = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
             ball.slowAcc()
         }
 
@@ -495,6 +580,15 @@ class GameScene: SKScene {
         ball.posX += difference
 
         top.update()
+
+        // The line creeps down, is knocked back up by boost() on each platform cleared, and
+        // permanently speeds up via increaseVel(). Catching the ball is what gives all of
+        // that consequence — until now nothing ever tested it.
+        if(collisionsLethal && top.hasCaught(ball: ball)){
+            lost()
+            return
+        }
+
         var isHit = false
         
         // `clouds` is mutated below while this loop walks a snapshot of it, so a positional
@@ -530,6 +624,7 @@ class GameScene: SKScene {
             if(platform.leftPlatform.sprite.position.y > 1400 * vScale){
                 platforms.removeAll { $0 === platform }
                 removeChildren(in: platform.getSpriteNode())
+                removeHitboxes(for: platform)
 
                 let p = Platform(pY:(-400 * vScale)-platoffset)
                 platforms.append(p)
@@ -538,6 +633,7 @@ class GameScene: SKScene {
                     addChild(pf)
                     pf.zPosition = 1
                 }
+                addHitboxes(for: p)
                 continue
             }
             if(platform.passed == false){
@@ -563,7 +659,7 @@ class GameScene: SKScene {
                 ball.setHitGroud(val:true)
                 isHit = true
                 ball.posY = platform.rightPlatform.height/2+ball.height/2+platform.rightPlatform.posY+2
-            }else if (ball.isColliding_endcap(obj: platform)){
+            }else if (collisionsLethal && ball.isColliding_endcap(obj: platform)){
                 lost()
             }else{
                 if isHit == false{

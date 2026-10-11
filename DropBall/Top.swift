@@ -30,6 +30,20 @@ class Top : Entity{
         velocity = velocity + 0.01 * GameViewController.vScale
     }
     
+    /// Whether the descending line has reached the ball.
+    ///
+    /// Unlike every other entity, the line lives in screen space: its update() writes
+    /// straight to `sprite.position` instead of going through the camera offset, so it
+    /// stays put on screen while the world scrolls behind it. The ball has to be converted
+    /// into that same space to compare them.
+    ///
+    /// Only the vertical axis is tested. The line spans the full width of the scene, so
+    /// there is no horizontal case where the ball could slip past it.
+    func hasCaught(ball: Entity) -> Bool {
+        let ballScreenY = ball.posY + Entity.cameraTranslationY
+        return ballScreenY + ball.collisionRadius >= posY - height/2
+    }
+
     override func update(){
         if(boostTimer == 0 || posY >= limit){
             increase = false

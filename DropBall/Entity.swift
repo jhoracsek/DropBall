@@ -21,8 +21,13 @@ class Entity {
     var hitboxColor = SKColor.init(red: 0.0, green: 1, blue: 0, alpha: 0.5)
     
     
-    var xBound : [CGFloat] = []
-    var yBound : [CGFloat] = []
+    // Collision bounds, recomputed each frame in update(). Plain scalars rather than
+    // arrays: these are read many times per frame, and array subscripting costs a bounds
+    // check on every access for no benefit here.
+    private(set) var minX : CGFloat = 0
+    private(set) var maxX : CGFloat = 0
+    private(set) var minY : CGFloat = 0
+    private(set) var maxY : CGFloat = 0
     
     var height : CGFloat
     var width : CGFloat
@@ -56,6 +61,21 @@ class Entity {
     
     var reductionX: CGFloat = 1
     var reductionY: CGFloat = 1
+
+    /// Test this entity as a circle rather than as its bounding box.
+    ///
+    /// The ball's art is round and fills its frame edge to edge, so a square hitbox puts
+    /// its corners about 15 points outside the visible ball — enough to die on an end cap
+    /// with clear daylight showing. Only the ball sets this.
+    var isCircular = false
+
+    /// Debug outline drawn when hitboxes are shown. Circular entities get a real circle so
+    /// the overlay matches what the collision code actually tests; rectangular ones use the
+    /// `hitbox` sprite directly.
+    private var hitboxCircle: SKShapeNode?
+
+    private static let boostTint = SKColor(red: 0, green: 0, blue: 1, alpha: 0.5)
+    private static let idleTint = SKColor(red: 0, green: 1, blue: 0, alpha: 0.5)
     
     static var cameraTranslationX : CGFloat = 0
     static var cameraTranslationY : CGFloat = 0
@@ -133,11 +153,11 @@ class Entity {
         self.height = sprite.size.height
         self.width = sprite.size.width
         
-        self.xBound.append(posX - width/2)
-        self.xBound.append(posX + width/2)
-        
-        self.yBound.append(posY - height/2)
-        self.yBound.append(posY + height/2)
+        self.minX = posX - width/2
+        self.maxX = posX + width/2
+
+        self.minY = posY - height/2
+        self.maxY = posY + height/2
         
         self.falls = falls
         
@@ -251,81 +271,84 @@ class Entity {
         return secondarySprite!
     }
     
-    private func inRect(p:[CGFloat], o1:[CGFloat], o4:[CGFloat]) -> Bool{
-        let x = p[0]
-        let y = p[1]
-        
-        if(x >= o1[0] && x <= o4[0]){
-            if(y <= o4[1] && y >= o1[1]){
-                return true
-            }
-        }
-        
-        return false
-    }
     func isColliding(obj: Platform) -> Bool{
-    
-        if(self.isColliding(obj : obj.leftPlatform) || self.isColliding(obj : obj.rightPlatform)){
-            return true
-        }
-        return false
+        return isColliding(obj: obj.leftPlatform) || isColliding(obj: obj.rightPlatform)
     }
     
     func isColliding(obj: SinglePlatform) -> Bool{
-    
-        if(self.isColliding(obj : obj.leftPlatform)){
-            return true
-        }
-        return false
+        return isColliding(obj: obj.leftPlatform)
     }
     
     func isColliding_endcap(obj: Platform) -> Bool{
-        
-        if(self.isColliding(obj : obj.leftEndCap) || self.isColliding(obj : obj.rightEndCap)){
-            return true
-        }
-        
-        return false
+        return isColliding(obj: obj.leftEndCap) || isColliding(obj: obj.rightEndCap)
     }
-    
-    func isColliding(obj: Entity) -> Bool{
-        let p1 = [xBound[0], yBound[0]]
-        let p2 = [xBound[1], yBound[0]]
-        let p3 = [xBound[0], yBound[1]]
-        let p4 = [xBound[1], yBound[1]]
-        
-        let o1 = [obj.xBound[0], obj.yBound[0]]
-        let o2 = [obj.xBound[1], obj.yBound[0]]
-        let o3 = [obj.xBound[0], obj.yBound[1]]
-        let o4 = [obj.xBound[1], obj.yBound[1]]
-        
-        if(inRect(p:p1,o1:o1,o4:o4)){
-            return true
-        }
-        if(inRect(p:p2,o1:o1,o4:o4)){
-            return true
-        }
-        if(inRect(p:p3,o1:o1,o4:o4)){
-            return true
-        }
-        if(inRect(p:p4,o1:o1,o4:o4)){
-            return true
-        }
-        
-        if(inRect(p:o1,o1:p1,o4:p4)){
-            return true
-        }
-        if(inRect(p:o2,o1:p1,o4:p4)){
-            return true
-        }
-        if(inRect(p:o3,o1:p1,o4:p4)){
-            return true
-        }
-        if(inRect(p:o4,o1:p1,o4:p4)){
-            return true
-        }
 
-        return false;
+    /// Tests this entity against another.
+    ///
+    /// A circular entity is tested as a circle against the other's rectangle; everything
+    /// else is a plain rectangle overlap. Only the ball is circular, and it is always the
+    /// receiver in this game, so there is no circle-versus-circle case to handle.
+    func isColliding(obj: Entity) -> Bool{
+        if(isCircular){
+            return circleOverlaps(obj)
+        }
+        return rectOverlaps(obj)
+    }
+
+    /// Standard axis-aligned overlap: the two boxes intersect unless one is entirely to one
+    /// side of the other.
+    ///
+    /// This replaced a corner-containment test that built eight arrays per call and ran
+    /// eight point-in-rect checks. That version also missed crossing overlaps — a tall
+    /// narrow box crossing a wide short one has no corner inside the other, yet they plainly
+    /// intersect. Comparing extents directly is both cheaper and correct in every case.
+    private func rectOverlaps(_ obj: Entity) -> Bool{
+        return minX <= obj.maxX && maxX >= obj.minX
+            && minY <= obj.maxY && maxY >= obj.minY
+    }
+
+    /// Circle against axis-aligned rectangle, by way of the closest point on the rectangle
+    /// to the circle's centre. Exact, and branch-light enough to run on every platform
+    /// every frame.
+    private func circleOverlaps(_ obj: Entity) -> Bool{
+        let closestX = min(max(posX, obj.minX), obj.maxX)
+        let closestY = min(max(posY, obj.minY), obj.maxY)
+
+        let dx = posX - closestX
+        let dy = posY - closestY
+        let radius = collisionRadius
+
+        return dx*dx + dy*dy <= radius*radius
+    }
+
+    /// Radius used when `isCircular` is set. The smaller half-extent, so the circle always
+    /// sits inside the sprite rather than poking out of it. Shrinks with reductionX/Y, so
+    /// those are still the knob if the ball needs a more forgiving hitbox.
+    var collisionRadius : CGFloat {
+        return min((width/2)*reductionX, (height/2)*reductionY)
+    }
+
+    /// The node to add to the scene when hitbox debugging is on. Built on first use, so
+    /// nothing is allocated for it in a normal build where showHitboxes is off.
+    func debugHitboxNode() -> SKNode {
+        guard isCircular else { return hitbox }
+
+        if hitboxCircle == nil {
+            let node = SKShapeNode(circleOfRadius: collisionRadius)
+            node.fillColor = hitboxColor
+            node.strokeColor = .clear
+            node.zPosition = 5
+            hitboxCircle = node
+        }
+        return hitboxCircle!
+    }
+
+    /// Tints this entity's debug overlay, so the different kinds of hitbox can be told
+    /// apart at a glance.
+    func setHitboxColor(_ color: SKColor){
+        hitboxColor = color
+        hitbox.color = color
+        hitboxCircle?.fillColor = color
     }
     
     func getSpriteNode() -> SKSpriteNode{
@@ -534,11 +557,11 @@ class Entity {
             }
         }
 
-        self.xBound[0] = (posX - (width/2)*reductionX)
-        self.xBound[1] = (posX + (width/2)*reductionX)
-        
-        self.yBound[0] = (posY - (height/2)*reductionY)
-        self.yBound[1] = (posY + (height/2)*reductionY)
+        self.minX = posX - (width/2)*reductionX
+        self.maxX = posX + (width/2)*reductionX
+
+        self.minY = posY - (height/2)*reductionY
+        self.maxY = posY + (height/2)*reductionY
         
         hitbox.position.x = posX + Entity.cameraTranslationX
         hitbox.position.y = posY + Entity.cameraTranslationY
@@ -546,9 +569,17 @@ class Entity {
         hitbox.size.width = width*reductionX
         hitbox.size.height = height*reductionY
 
+        hitboxCircle?.position = hitbox.position
+
         // These are purely cosmetic and only meaningful for the ball, which is the only
         // entity that falls.
         if(falls){
+            // Debug tint, only visible when showHitboxes is on: blue while boosting, green
+            // otherwise. Cached colours rather than fresh ones every frame.
+            let tint = boosting ? Entity.boostTint : Entity.idleTint
+            hitbox.color = tint
+            hitboxCircle?.fillColor = tint
+
             updateTrail()
             wind?.update(center: sprite.position,
                          speedRatio: fallSpeedRatio,
