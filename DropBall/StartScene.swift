@@ -21,6 +21,8 @@ class StartScene: SKScene {
     var highscoreButton = SKButton(x:0, y:100, unclick:"highscore", click:"highscoreclick", test_function: {} )
     
     var settingsButton = SKButton(x:0, y:100, unclick:"settings", click:"settings", test_function: {} )
+
+    private var settingsDropdown: SettingsDropdown?
     
     
     let logo = SKSpriteNode(imageNamed: "logo")
@@ -95,12 +97,16 @@ class StartScene: SKScene {
             self.addChild(i)
         }
 
-        settingsButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"settings", click:"homebuttonsmall", test_function: go_to_settings )
+        // Both images are the gear. The pressed state used to be "homebuttonsmall", which
+        // made tapping settings flash a house.
+        settingsButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"settings", click:"settings", test_function: toggle_settings )
         settingsButton.scale(scale: 0.65)
         
         for i in settingsButton.getSpriteNode(){
             self.addChild(i)
         }
+
+        settingsDropdown = SettingsDropdown(below: settingsButton, in: self)
         
         logo.position = CGPoint(x: 0, y:275+offset)
         addChild(logo)
@@ -128,16 +134,18 @@ class StartScene: SKScene {
         }
     }
     
-    func go_to_settings(){
-        if let scene = SKScene(fileNamed: "SettingsScene") {
-            scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
-            scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
-        }
+    func toggle_settings(){
+        settingsDropdown?.toggleExpanded()
     }
     
     func touchDown(atPoint pos : CGPoint) {
+        // Given first refusal on the touch. While the panel is open it swallows everything,
+        // including taps meant to dismiss it, so closing the menu can't also start a game.
+        // A tap on the gear counts as "outside", which is what closes it again.
+        if settingsDropdown?.handleTouch(at: pos) == true {
+            return
+        }
+
         startButton.checkPressed(pos: pos)
         highscoreButton.checkPressed(pos: pos)
         settingsButton.checkPressed(pos: pos)

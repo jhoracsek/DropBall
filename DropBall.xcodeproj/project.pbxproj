@@ -10,6 +10,7 @@
 		170CB8AE307B5B5700CC74A5 /* WindStreaks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */; };
 		173F56C3307BEB6700CB6923 /* DebugOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173F56C2307BEB6700CB6923 /* DebugOverlay.swift */; };
 		17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17541947307AC48B00FEAC5F /* SceneDelegate.swift */; };
+		17AA134A307D635600866DC1 /* SettingsDropdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17AA1349307D635600866DC1 /* SettingsDropdown.swift */; };
 		E229529D28BC04A500218A5C /* StartScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = E229529C28BC04A500218A5C /* StartScene.swift */; };
 		E22952A128BC09BD00218A5C /* StartScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = E22952A028BC09BD00218A5C /* StartScene.sks */; };
 		E22952A328BC7AB700218A5C /* SKButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22952A228BC7AB700218A5C /* SKButton.swift */; };
@@ -62,6 +63,7 @@
 		170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindStreaks.swift; sourceTree = "<group>"; };
 		173F56C2307BEB6700CB6923 /* DebugOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugOverlay.swift; sourceTree = "<group>"; };
 		17541947307AC48B00FEAC5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		17AA1349307D635600866DC1 /* SettingsDropdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDropdown.swift; sourceTree = "<group>"; };
 		E229529C28BC04A500218A5C /* StartScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartScene.swift; sourceTree = "<group>"; };
 		E22952A028BC09BD00218A5C /* StartScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = StartScene.sks; sourceTree = "<group>"; };
 		E22952A228BC7AB700218A5C /* SKButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKButton.swift; sourceTree = "<group>"; };
@@ -186,6 +188,7 @@
 				17541947307AC48B00FEAC5F /* SceneDelegate.swift */,
 				170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */,
 				173F56C2307BEB6700CB6923 /* DebugOverlay.swift */,
+				17AA1349307D635600866DC1 /* SettingsDropdown.swift */,
 			);
 			path = DropBall;
 			sourceTree = "<group>";
@@ -365,6 +368,7 @@
 				17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */,
 				E22952A328BC7AB700218A5C /* SKButton.swift in Sources */,
 				E229529D28BC04A500218A5C /* StartScene.swift in Sources */,
+				17AA134A307D635600866DC1 /* SettingsDropdown.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
