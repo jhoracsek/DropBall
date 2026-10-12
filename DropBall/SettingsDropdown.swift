@@ -68,6 +68,14 @@ final class SettingsDropdown {
 
     private let panelHeight: CGFloat
 
+    /// Where the container sits when the panel is fully open. The single source of truth
+    /// for its position — every animation targets this absolutely rather than nudging the
+    /// current position, so repeated opening and closing cannot accumulate drift.
+    private let restingPosition: CGPoint
+
+    /// How far above its resting place the panel starts and ends, for the slide.
+    private static let slideOffset: CGFloat = 14
+
     // MARK: - Setup
 
     /// - Parameters:
@@ -81,7 +89,10 @@ final class SettingsDropdown {
         let right = gear.position.x + gear.size.width/2
         let top = gear.position.y - gear.size.height/2 - Self.gapBelowButton
 
-        container.position = CGPoint(x: right - Self.panelWidth/2, y: top)
+        restingPosition = CGPoint(x: right - Self.panelWidth/2, y: top)
+
+        container.name = "settingsDropdown"
+        container.position = restingPosition
         container.zPosition = 100
         container.alpha = 0
         container.isHidden = true
@@ -177,20 +188,37 @@ final class SettingsDropdown {
 
         container.removeAllActions()
 
+        // Both directions move to an absolute point rather than by a relative amount.
+        // A relative close that isn't matched by a relative open leaves the container
+        // permanently displaced, and because it is anchored at the panel's top edge the
+        // panel appears to grow upward a little more on every cycle.
+        let raised = CGPoint(x: restingPosition.x, y: restingPosition.y + Self.slideOffset)
+
         // Fading and sliding rather than unrolling the panel's height: scaling the
         // container would squash the text on the way in, which looks cheap.
-        let slide = SKAction.moveBy(x: 0, y: expanded ? -14 : 14, duration: Self.animationDuration)
-        slide.timingMode = expanded ? .easeOut : .easeIn
-        let fade = SKAction.fadeAlpha(to: expanded ? 1 : 0, duration: Self.animationDuration)
-
         if expanded {
             container.isHidden = false
-            container.position.y += 14
+
+            // Snap to a known start, so an interrupted close can't offset the open either.
+            container.position = raised
+            container.alpha = 0
+
+            let slide = SKAction.move(to: restingPosition, duration: Self.animationDuration)
+            slide.timingMode = .easeOut
+            let fade = SKAction.fadeAlpha(to: 1, duration: Self.animationDuration)
             container.run(SKAction.group([slide, fade]))
         } else {
+            let slide = SKAction.move(to: raised, duration: Self.animationDuration)
+            slide.timingMode = .easeIn
+            let fade = SKAction.fadeAlpha(to: 0, duration: Self.animationDuration)
+
             container.run(SKAction.sequence([
                 SKAction.group([slide, fade]),
-                SKAction.run { [weak self] in self?.container.isHidden = true }
+                SKAction.run { [weak self] in
+                    guard let self = self else { return }
+                    self.container.isHidden = true
+                    self.container.position = self.restingPosition
+                }
             ]))
         }
     }
