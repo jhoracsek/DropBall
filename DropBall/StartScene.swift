@@ -20,7 +20,7 @@ class StartScene: SKScene {
     
     var highscoreButton = SKButton(x:0, y:100, unclick:"highscore", click:"highscoreclick", test_function: {} )
     
-    var settingsButton = SKButton(x:0, y:100, unclick:"pause", click:"pause", test_function: {} )
+    var settingsButton = SKButton(x:0, y:100, unclick:"settings", click:"settings", test_function: {} )
     
     
     let logo = SKSpriteNode(imageNamed: "logo")
@@ -95,7 +95,7 @@ class StartScene: SKScene {
             self.addChild(i)
         }
 
-        settingsButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"pause", click:"homebuttonsmall", test_function: go_to_settings )
+        settingsButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"settings", click:"homebuttonsmall", test_function: go_to_settings )
         settingsButton.scale(scale: 0.65)
         
         for i in settingsButton.getSpriteNode(){
