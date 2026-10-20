@@ -80,6 +80,7 @@
 		17541947307AC48B00FEAC5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		17AA1349307D635600866DC1 /* SettingsDropdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDropdown.swift; sourceTree = "<group>"; };
 		17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = PixelOperator8.ttf; sourceTree = "<group>"; };
+		17E6886730852B3400BDF09D /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		17E6886930854A0700BDF09D /* bounce1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce1.wav; sourceTree = "<group>"; };
 		17E6886B30854A0A00BDF09D /* bounce2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce2.wav; sourceTree = "<group>"; };
 		17E6886D30854A0D00BDF09D /* bounce3.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce3.wav; sourceTree = "<group>"; };
@@ -220,6 +221,7 @@
 				17AA1349307D635600866DC1 /* SettingsDropdown.swift */,
 				17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */,
 				17EC0EE7307E95AB00D0A355 /* Haptics.swift */,
+				17E6886730852B3400BDF09D /* Diagnostics.swift */,
 				17E6886930854A0700BDF09D /* bounce1.wav */,
 				17E6886B30854A0A00BDF09D /* bounce2.wav */,
 				17E6886D30854A0D00BDF09D /* bounce3.wav */,
@@ -403,6 +405,7 @@
 				E2E28ACA282733EB001F8935 /* Platform.swift in Sources */,
 				E2BF96E12821F354000A2B9C /* Entity.swift in Sources */,
 				173F56C3307BEB6700CB6923 /* DebugOverlay.swift in Sources */,
+				17E6886830852B3400BDF09D /* Diagnostics.swift in Sources */,
 				17E688723085B9F300BDF09D /* Attributions.swift in Sources */,
 				E2980AD3294BB87400FD8951 /* CoreDataStack.swift in Sources */,
 				E2E28ACC282781FF001F8935 /* mod.swift in Sources */,

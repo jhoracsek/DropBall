@@ -552,7 +552,25 @@ class GameScene: SKScene {
         }
     }
     
+    /// Called by SpriteKit just before this scene is swapped out, which is the only moment
+    /// the emitter's target node is guaranteed still alive. Tearing the emitter down here
+    /// means it can never outlive what it points at.
+    override func willMove(from view: SKView) {
+        ball.teardownEffects()
+
+        #if DEBUG
+        Diagnostics.reset()
+        #endif
+    }
+
     override func update(_ currentTime: TimeInterval) {
+        // Tracks memory and node growth once a second. The crash leaves no report, so the
+        // last line logged before the app disappears is the evidence.
+        #if DEBUG
+        Diagnostics.sample(self, time: currentTime,
+                           extra: "platforms=\(platforms.count) clouds=\(clouds.count) score=\(score) ballY=\(Int(ball.posY)) camY=\(Int(Entity.cameraTranslationY)) topY=\(Int(top.posY)) topVel=\(String(format: "%.2f", top.velocity))")
+        #endif
+
         if(gameLost){
             ball.falls = false
             if(shake){
