@@ -133,6 +133,13 @@ class Entity {
     /// Counts down from squashDuration after each bounce.
     private var squashFrames : CGFloat = 0
 
+    /// Fires when the ball genuinely bounces off a platform, as opposed to a collision
+    /// still inside its cooldown. The parameter is how hard it landed, 0 to 1.
+    ///
+    /// A closure rather than something Entity acts on directly, because the menu ball
+    /// bounces too — only GameScene attaches a handler, so only the game rumbles.
+    var onBounce : ((CGFloat) -> Void)?
+
     /// True while the player is holding to accelerate the ball.
     private var boosting = false
 
@@ -477,7 +484,10 @@ class Entity {
                 hitGround = true
 
                 // A real bounce, as opposed to a collision still inside its cooldown.
+                // yVel is still the incoming speed here — falling() doesn't apply the
+                // rebound until the next frame — so it's the right measure of the impact.
                 squashFrames = squashDuration
+                onBounce?(fallSpeedRatio)
             }
             
         }else{

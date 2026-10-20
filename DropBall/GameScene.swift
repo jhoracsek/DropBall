@@ -141,6 +141,18 @@ class GameScene: SKScene {
         ball.initParticles(in: self)
         ball.initWind(in: self)
 
+        // Only the game scene attaches this, so the menu ball bounces silently.
+        ball.onBounce = { [weak self] strength in
+            guard let self = self, !self.gamePaused, !self.gameLost else { return }
+            Haptics.impact(strength: strength)
+            Audio.playBounce(strength: strength)
+        }
+
+        // Both warm up lazily: the Taptic Engine is powered down when idle, and the clips
+        // need decoding, so without this the first bounce of a run arrives late.
+        Haptics.prepare()
+        Audio.prepare()
+
         ball.isCircular = true
 
         if(showHitboxes){
