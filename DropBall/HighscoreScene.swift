@@ -26,6 +26,14 @@ class HighscoreScene: SKScene {
     var offsetMax : CGFloat = 0
 
     var scores = [Score]()
+
+    #if DEBUG
+    private var debugOverlay: DebugOverlay?
+
+    /// First tap arms, second tap wipes. Cheap guard against losing a pile of test scores
+    /// to a stray tap, without putting an alert in the way.
+    private var resetArmed = false
+    #endif
     
     func getScores(){
         let fet: NSFetchRequest<Score> = Score.fetchRequest()
@@ -122,7 +130,64 @@ class HighscoreScene: SKScene {
         cropNode.maskNode = mask
         addChild(cropNode)
         cropNode.zPosition = 40
+
+        #if DEBUG
+        setUpDebugOverlay()
+        #endif
     }
+
+    #if DEBUG
+    private func setUpDebugOverlay(){
+        let overlay = DebugOverlay(in: self, sceneSize: CGSize(width: WIDTH, height: HEIGHT))
+
+        overlay.addAction("Reset Scores") { [weak self] in
+            guard let self = self else { return nil }
+
+            guard self.resetArmed else {
+                self.resetArmed = true
+                return "Tap again to wipe"
+            }
+
+            self.resetScores()
+            return nil
+        }
+
+        debugOverlay = overlay
+    }
+
+    /// Deletes every saved score, then rebuilds the screen so the change is visible.
+    ///
+    /// Deleted one at a time through the managed context rather than with an
+    /// NSBatchDeleteRequest: a batch delete goes straight to the store and leaves the
+    /// context holding objects that no longer exist, which would need a separate merge or
+    /// reset. The table is small enough that it isn't worth the complication.
+    private func resetScores(){
+        let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
+        let request: NSFetchRequest<Score> = Score.fetchRequest()
+
+        do {
+            for row in try context.fetch(request) {
+                context.delete(row)
+            }
+            AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
+        } catch let error as NSError {
+            print("Reset error: \(error) description: \(error.userInfo)")
+        }
+
+        reloadScene()
+    }
+
+    /// Re-presents the scene from scratch. The list, its crop node and the scroll state are
+    /// all built once in didMove, so rebuilding is simpler and safer than unpicking them.
+    private func reloadScene(){
+        guard let view = self.view else { return }
+        guard let scene = SKScene(fileNamed: "HighscoreScene") else { return }
+
+        scene.size = CGSize(width: GameViewController.WIDTH, height: GameViewController.HEIGHT)
+        scene.scaleMode = .aspectFill
+        view.presentScene(scene)
+    }
+    #endif
 
     var isTouched=false
     var initialPosition:CGFloat = 0
@@ -132,6 +197,14 @@ class HighscoreScene: SKScene {
     var curY : CGFloat = 0
 
     func touchDown(atPoint pos : CGPoint) {
+        // Checked first, and returns, so tapping a debug button doesn't also start a drag
+        // and fling the list.
+        #if DEBUG
+        if debugOverlay?.handleTouch(at: pos) == true {
+            return
+        }
+        #endif
+
         homeButton.checkPressed(pos: pos)
 
         initialPosition = pos.y

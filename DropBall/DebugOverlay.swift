@@ -16,20 +16,28 @@ import SpriteKit
 /// buttons makes it hard to mistake for one in a screenshot.
 final class DebugOverlay {
 
-    private final class ToggleButton: SKShapeNode {
+    /// Serves both kinds of button. `isOn` is nil for a one-shot action, non-nil for a
+    /// toggle — the only difference is whether the state is folded into the label and the
+    /// fill colour.
+    private final class DebugButton: SKShapeNode {
         private let title: String
-        private let onChange: (Bool) -> Void
         private let label = SKLabelNode(fontNamed: "Menlo-Bold")
 
-        private(set) var isOn: Bool
+        /// Receives the button's state after the tap (nil for an action button) and returns
+        /// a replacement label, or nil to keep the current one. The return lets a
+        /// destructive action ask for confirmation on a second tap.
+        private let onTap: (Bool?) -> String?
+
+        private(set) var isOn: Bool?
+        private var overrideTitle: String?
 
         init(title: String,
-             isOn: Bool,
+             isOn: Bool?,
              size: CGSize,
-             onChange: @escaping (Bool) -> Void) {
+             onTap: @escaping (Bool?) -> String?) {
             self.title = title
             self.isOn = isOn
-            self.onChange = onChange
+            self.onTap = onTap
             super.init()
 
             path = CGPath(roundedRect: CGRect(x: -size.width/2, y: -size.height/2,
@@ -50,17 +58,33 @@ final class DebugOverlay {
             fatalError("DebugOverlay is created in code only")
         }
 
-        func toggle() {
-            isOn.toggle()
+        func tapped() {
+            if isOn != nil {
+                isOn?.toggle()
+            }
+            if let replacement = onTap(isOn) {
+                overrideTitle = replacement
+            }
             refresh()
-            onChange(isOn)
         }
 
         private func refresh() {
-            label.text = "\(title): \(isOn ? "ON" : "OFF")"
-            fillColor = isOn
-                ? SKColor(red: 0.10, green: 0.50, blue: 0.22, alpha: 0.85)
-                : SKColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 0.75)
+            if let overrideTitle = overrideTitle {
+                label.text = overrideTitle
+            } else if let isOn = isOn {
+                label.text = "\(title): \(isOn ? "ON" : "OFF")"
+            } else {
+                label.text = title
+            }
+
+            if let isOn = isOn {
+                fillColor = isOn
+                    ? SKColor(red: 0.10, green: 0.50, blue: 0.22, alpha: 0.85)
+                    : SKColor(red: 0.10, green: 0.10, blue: 0.12, alpha: 0.75)
+            } else {
+                // Actions read as neutral until tapped, so they don't look like state.
+                fillColor = SKColor(red: 0.26, green: 0.14, blue: 0.14, alpha: 0.85)
+            }
         }
     }
 
@@ -68,7 +92,7 @@ final class DebugOverlay {
     private static let buttonSpacing: CGFloat = 54
 
     private let container = SKNode()
-    private var buttons: [ToggleButton] = []
+    private var buttons: [DebugButton] = []
 
     /// - Parameters:
     ///   - target: the scene to attach to.
@@ -85,10 +109,21 @@ final class DebugOverlay {
     /// Adds a toggle below the previous one. `onChange` fires only on an actual tap, not
     /// when the initial value is set.
     func addToggle(_ title: String, isOn: Bool, onChange: @escaping (Bool) -> Void) {
-        let button = ToggleButton(title: title,
-                                  isOn: isOn,
-                                  size: Self.buttonSize,
-                                  onChange: onChange)
+        add(DebugButton(title: title, isOn: isOn, size: Self.buttonSize) { newState in
+            onChange(newState ?? false)
+            return nil
+        })
+    }
+
+    /// Adds a one-shot action button.
+    ///
+    /// - Parameter handler: performs the action and optionally returns new label text, so a
+    ///   destructive action can ask for confirmation on a second tap.
+    func addAction(_ title: String, handler: @escaping () -> String?) {
+        add(DebugButton(title: title, isOn: nil, size: Self.buttonSize) { _ in handler() })
+    }
+
+    private func add(_ button: DebugButton) {
         button.position = CGPoint(x: 0, y: -CGFloat(buttons.count) * Self.buttonSpacing)
         container.addChild(button)
         buttons.append(button)
@@ -105,7 +140,7 @@ final class DebugOverlay {
                             y: scenePoint.y - container.position.y)
 
         for button in buttons where button.frame.contains(local) {
-            button.toggle()
+            button.tapped()
             return true
         }
         return false
