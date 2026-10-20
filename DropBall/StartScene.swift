@@ -122,6 +122,16 @@ class StartScene: SKScene {
         }
 
         settingsDropdown = SettingsDropdown(below: settingsButton, in: self)
+        settingsDropdown?.onShowCredits = { [weak self] in
+            self?.go_to_credits()
+        }
+        settingsDropdown?.onSettingChanged = { key, isOn in
+            // Sound effects read the setting on each play, so they need nothing here. Music
+            // is already running, so it has to be told to stop or start straight away.
+            if key == "MusicOff" {
+                Music.shared.setEnabled(isOn)
+            }
+        }
         
         logo.position = CGPoint(x: 0, y:275+offset)
         addChild(logo)
@@ -151,6 +161,14 @@ class StartScene: SKScene {
     
     func toggle_settings(){
         settingsDropdown?.toggleExpanded()
+    }
+
+    /// Built in code rather than loaded from a .sks, so it's constructed directly.
+    func go_to_credits(){
+        let scene = AttributionsScene(size: CGSize(width: GameViewController.WIDTH,
+                                                   height: GameViewController.HEIGHT))
+        scene.scaleMode = .aspectFill
+        view?.presentScene(scene, transition: SKTransition.crossFade(withDuration: 0.5))
     }
     
     func touchDown(atPoint pos : CGPoint) {
