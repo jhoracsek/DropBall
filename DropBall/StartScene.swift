@@ -14,6 +14,13 @@ class StartScene: SKScene {
     
     let offset: CGFloat = -50
 
+    /// Scales the menu's bounce sound down relative to gameplay.
+    ///
+    /// The menu ball drops from a fixed height on a 1.67s cycle, so it lands at exactly the
+    /// same force every time with nothing else going on to mask it. At full level that
+    /// works out at 0.75 against music sitting at 0.45; this brings the two level.
+    private static let menuBounceVolume: CGFloat = 0.6
+
     let background = SKSpriteNode(imageNamed: "background")
 
     var startButton = SKButton(x:0, y:0, unclick:"play", click:"playclick", test_function: {} )
@@ -79,6 +86,14 @@ class StartScene: SKScene {
         ball.setScale(scale: 0.75)
         ball.isCircular = true
         ball.update()
+
+        // Sound only. Haptics stay game-only on purpose — a menu that buzzes in your hand
+        // while you're reading it is a different proposition from one that makes a noise.
+        //
+        // Captures nothing, so there's no reference cycle back into the scene.
+        ball.onBounce = { strength in
+            Audio.playBounce(strength: strength, scale: StartScene.menuBounceVolume)
+        }
         
         addChild(platform.getSpriteNode()[0])
         platform.getSpriteNode()[0].zPosition = 2
