@@ -26,6 +26,11 @@ class GameScene: SKScene {
     /// lands on platforms, so the game stays playable while you watch something else.
     var collisionsLethal = true
 
+    /// When false the ball neither lands on platforms nor dies on them, so it just falls.
+    /// Platforms still scroll and recycle, and crossing a gap still scores, so the world
+    /// carries on around the falling ball rather than freezing.
+    var collisionsEnabled = true
+
     #if DEBUG
     private var debugOverlay: DebugOverlay?
     #endif
@@ -195,6 +200,9 @@ class GameScene: SKScene {
         }
         overlay.addToggle("Invincible", isOn: !collisionsLethal) { [weak self] isOn in
             self?.collisionsLethal = !isOn
+        }
+        overlay.addToggle("No Clip", isOn: !collisionsEnabled) { [weak self] isOn in
+            self?.collisionsEnabled = !isOn
         }
 
         debugOverlay = overlay
@@ -596,7 +604,7 @@ class GameScene: SKScene {
         // The line creeps down, is knocked back up by boost() on each platform cleared, and
         // permanently speeds up via increaseVel(). Catching the ball is what gives all of
         // that consequence — until now nothing ever tested it.
-        if(collisionsLethal && top.hasCaught(ball: ball)){
+        if(collisionsEnabled && collisionsLethal && top.hasCaught(ball: ball)){
             lost()
             return
         }
@@ -665,6 +673,19 @@ class GameScene: SKScene {
                     top.boost()
                     top.increaseVel()
                 }
+            }
+
+            // No-clip skips landing and dying, but only after the scroll, recycle and
+            // scoring above — otherwise the world would freeze rather than carry on past
+            // the falling ball.
+            //
+            // setHitGroud(false) has to be called explicitly. Without it the ball keeps
+            // whatever grounded state it held when the toggle was flipped, and falling()
+            // would re-apply the rebound every frame, leaving it hovering in place.
+            guard collisionsEnabled else {
+                ball.setHitGroud(val: false)
+                ball.checkCollision()
+                continue
             }
             
             if(ball.isColliding(obj: platform)){
