@@ -86,14 +86,9 @@ class Entity {
     var hasSecondarySprite = false
     var spriteName: String?
     
-    var particles: SKEmitterNode?
-
-    /// Held strongly on purpose. `SKEmitterNode.targetNode` is a *weak* property, but
-    /// SpriteKit's internal particle code caches a raw pointer to it. If the target is
-    /// released while the emitter is still birthing particles, that cached pointer dangles
-    /// and runBirthSimulation() dereferences it — a main-thread EXC_BAD_ACCESS inside
-    /// SKCEmitterNode with no Swift frame anywhere in the backtrace.
-    private var particleTarget: SKNode?
+    /// The boost trail. A hand-rolled sprite pool rather than an SKEmitterNode — see
+    /// BallTrail for why.
+    private var trail: BallTrail?
 
     private var wind: WindStreaks?
     var fingerPosition: CGFloat =  0
@@ -131,11 +126,7 @@ class Entity {
     /// values keep it a narrow column; raising it spreads the particles out to the flanks.
     let trailSpread : CGFloat = 0.3
 
-    /// Particles emitted per second at full speed. The single biggest lever on how heavy
-    /// the trail reads.
-    let trailBirthRate : CGFloat = 260
-
-    /// Ceiling on the fall speed handed to the emitter, as a multiple of referenceSpeed.
+    /// Ceiling on the fall speed handed to the trail, as a multiple of referenceSpeed.
     /// Normal play peaks around 1.2x, so this only bites on an unbounded fall.
     static let maxTrailSpeedFactor : CGFloat = 2
 
@@ -190,55 +181,10 @@ class Entity {
 
         previousPosX = posX
     }
-    /// Attaches the speed-boost trail to this entity.
-    ///
-    /// `target` should be the scene, and becomes both the emitter's parent and its target
-    /// node. Being the target is what leaves the particles behind in the world instead of
-    /// dragging them along with the ball. Being the parent keeps the emitter outside the
-    /// ball's transform, so the squash and stretch doesn't deform the particles too —
-    /// updateTrail() moves it to follow the ball by hand instead.
-    @discardableResult
-    func initParticles(in target: SKNode) -> SKEmitterNode?{
-        // SKEmitterNode(fileNamed:) replaces the deprecated NSKeyedUnarchiver path, and
-        // returns nil rather than trapping if the .sks is ever missing from the bundle.
-        guard let emitter = SKEmitterNode(fileNamed: "Particle") else {
-            return nil
-        }
-
-        particles = emitter
-        particleTarget = target
-
-        emitter.name = "sparkEmitter"
-        emitter.targetNode = target
-
-        // In scene space the trail needs to sit above the platforms (1) but still behind
-        // the ball itself (2).
-        emitter.particleZPosition = 1.5
-
-        // A trail should read as a short streak rather than a long-lived plume, so the
-        // particles are small, die quickly, and shrink and fade as they go.
-        emitter.particleLifetime = 0.45
-        emitter.particleLifetimeRange = 0.2
-        emitter.particleScale = 0.28
-        emitter.particleScaleRange = 0.14
-        emitter.particleScaleSpeed = -0.55
-
-        // alphaSpeed is paired with particleLifetime: at -1.4 over 0.45s a particle loses
-        // just about all of its 0.6 starting alpha, so it fades out right as it dies rather
-        // than vanishing early or being cut off still visible.
-        emitter.particleAlpha = 0.6
-        emitter.particleAlphaSpeed = -1.4
-
-        emitter.particlePositionRange = CGVector(dx: width * trailSpread, dy: height * 0.1)
-
-        emitter.emissionAngle = .pi / 2
-        emitter.emissionAngleRange = 0.22
-
-        // Off until the player actually boosts; updateTrail() drives it from there.
-        emitter.particleBirthRate = 0
-
-        target.addChild(emitter)
-        return emitter
+    /// Attaches the speed-boost trail. `target` should be the scene, so the particles sit
+    /// in world space and are unaffected by the ball's squash and stretch.
+    func initParticles(in target: SKNode){
+        trail = BallTrail(in: target, spawnSpread: width * trailSpread)
     }
 
     /// Adds the arcs of wind that sweep around the ball at speed. Like the trail, `target`
@@ -253,7 +199,7 @@ class Entity {
     /// Needed because pausing returns early from GameScene.update() before Entity.update()
     /// runs, so the trail has no other opportunity to notice it should stop.
     func setEffectsPaused(_ paused: Bool){
-        particles?.isPaused = paused
+        trail?.isPaused = paused
         wind?.isPaused = paused
     }
 
@@ -263,23 +209,15 @@ class Entity {
     /// the birth rate has to be cleared here rather than left for the next frame.
     func stopEffects(){
         boosting = false
-        particles?.particleBirthRate = 0
     }
 
-    /// Tears the emitter down before its target node can go away.
-    ///
-    /// Zeroing the birth rate only stops *new* particles; the ones already alive keep being
-    /// simulated against the target. resetSimulation() discards those too, so nothing is
-    /// left referring to a node that is about to be released.
+    /// Clears the trail before the scene it lives in goes away.
     func teardownEffects(){
         boosting = false
 
-        particles?.particleBirthRate = 0
-        particles?.resetSimulation()
-        particles?.targetNode = nil
-        particles?.removeFromParent()
-        particles = nil
-        particleTarget = nil
+        trail?.clear()
+        trail?.removeFromScene()
+        trail = nil
 
         wind = nil
     }
@@ -430,46 +368,24 @@ class Entity {
         boosting = false
     }
 
-    /// Ramps the trail with the ball's actual speed.
+    /// Drives the trail from the ball's actual speed.
     ///
     /// The camera keeps the ball at a fixed point on screen and scrolls the world past it,
     /// so a particle has to travel upward at exactly the world's scroll speed to look like
-    /// it is hanging still in the air. That speed is the ball's fall speed. The .sks used a
-    /// fixed 100 pt/s, which at full boost is a small fraction of the real scroll rate —
-    /// which is why the old trail looked like it was being dragged along.
+    /// it is hanging still in the air. That speed is the ball's fall speed.
     private func updateTrail(){
-        guard let particles = particles else { return }
+        guard let trail = trail else { return }
 
-        // The emitter is parented to the scene rather than the ball, so it has to be moved
-        // onto the ball by hand each frame. Sitting low on the ball is what lets the stream
-        // climb past its sides. Done before the early return so the emitter is already in
-        // position the instant a boost starts.
-        particles.position = CGPoint(x: sprite.position.x,
-                                     y: sprite.position.y - height * trailOriginDepth)
-
-        guard boosting && yVel < 0 else {
-            particles.particleBirthRate = 0
-            return
-        }
-
-        // Easing in with speed keeps the trail from popping on the instant a hold registers.
-        particles.particleBirthRate = trailBirthRate * fallSpeedRatio
-
-        // yVel is per frame; the emitter wants points per second.
-        //
-        // Clamped, which the original wasn't. Nothing bounds yVel during a long fall — and
-        // with No Clip on the ball accelerates indefinitely — so this fed numbers that grew
-        // without limit straight into SpriteKit's particle maths. The ceiling is generous
-        // enough that normal play never reaches it (yVel peaks around 1.2x referenceSpeed
-        // between platforms), so the look is unchanged.
+        // Clamped: nothing bounds yVel during a long fall, and with No Clip on the ball
+        // accelerates indefinitely. Normal play peaks around 1.2x referenceSpeed, so the
+        // ceiling never bites in ordinary use.
         let impactSpeed = min(abs(yVel), referenceSpeed * Entity.maxTrailSpeedFactor)
-        guard impactSpeed.isFinite else {
-            particles.particleBirthRate = 0
-            return
-        }
 
-        particles.particleSpeed = impactSpeed * 60
-        particles.particleSpeedRange = impactSpeed * 12
+        trail.update(center: CGPoint(x: sprite.position.x,
+                                     y: sprite.position.y - height * trailOriginDepth),
+                     emitting: boosting && yVel < 0,
+                     speed: impactSpeed * 60,
+                     intensity: fallSpeedRatio)
     }
 
     /// Stretches the ball along its direction of travel and squashes it on impact.
