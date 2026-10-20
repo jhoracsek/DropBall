@@ -17,6 +17,8 @@
 		17E6886C30854A0A00BDF09D /* bounce2.wav in Resources */ = {isa = PBXBuildFile; fileRef = 17E6886B30854A0A00BDF09D /* bounce2.wav */; };
 		17E6886E30854A0D00BDF09D /* bounce3.wav in Resources */ = {isa = PBXBuildFile; fileRef = 17E6886D30854A0D00BDF09D /* bounce3.wav */; };
 		17E6887030854A4300BDF09D /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E6886F30854A4300BDF09D /* Audio.swift */; };
+		17E688723085B9F300BDF09D /* Attributions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E688713085B9F300BDF09D /* Attributions.swift */; };
+		17E688743085BA1B00BDF09D /* AttributionsScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E688733085BA1B00BDF09D /* AttributionsScene.swift */; };
 		17E688763085BF2E00BDF09D /* music_world_of_nowhere.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 17E688753085BF2E00BDF09D /* music_world_of_nowhere.m4a */; };
 		17E688783085BF3300BDF09D /* music_your_tomorrow.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 17E688773085BF3300BDF09D /* music_your_tomorrow.m4a */; };
 		17E6887A3085BF3800BDF09D /* music_so_do_i.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 17E688793085BF3800BDF09D /* music_so_do_i.m4a */; };
@@ -82,6 +84,8 @@
 		17E6886B30854A0A00BDF09D /* bounce2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce2.wav; sourceTree = "<group>"; };
 		17E6886D30854A0D00BDF09D /* bounce3.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce3.wav; sourceTree = "<group>"; };
 		17E6886F30854A4300BDF09D /* Audio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Audio.swift; sourceTree = "<group>"; };
+		17E688713085B9F300BDF09D /* Attributions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Attributions.swift; sourceTree = "<group>"; };
+		17E688733085BA1B00BDF09D /* AttributionsScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttributionsScene.swift; sourceTree = "<group>"; };
 		17E688753085BF2E00BDF09D /* music_world_of_nowhere.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = music_world_of_nowhere.m4a; sourceTree = "<group>"; };
 		17E688773085BF3300BDF09D /* music_your_tomorrow.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = music_your_tomorrow.m4a; sourceTree = "<group>"; };
 		17E688793085BF3800BDF09D /* music_so_do_i.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = music_so_do_i.m4a; sourceTree = "<group>"; };
@@ -220,6 +224,8 @@
 				17E6886B30854A0A00BDF09D /* bounce2.wav */,
 				17E6886D30854A0D00BDF09D /* bounce3.wav */,
 				17E6886F30854A4300BDF09D /* Audio.swift */,
+				17E688713085B9F300BDF09D /* Attributions.swift */,
+				17E688733085BA1B00BDF09D /* AttributionsScene.swift */,
 				17E688753085BF2E00BDF09D /* music_world_of_nowhere.m4a */,
 				17E688773085BF3300BDF09D /* music_your_tomorrow.m4a */,
 				17E688793085BF3800BDF09D /* music_so_do_i.m4a */,
@@ -397,6 +403,7 @@
 				E2E28ACA282733EB001F8935 /* Platform.swift in Sources */,
 				E2BF96E12821F354000A2B9C /* Entity.swift in Sources */,
 				173F56C3307BEB6700CB6923 /* DebugOverlay.swift in Sources */,
+				17E688723085B9F300BDF09D /* Attributions.swift in Sources */,
 				E2980AD3294BB87400FD8951 /* CoreDataStack.swift in Sources */,
 				E2E28ACC282781FF001F8935 /* mod.swift in Sources */,
 				E2BF96B62821C65E000A2B9C /* GameScene.swift in Sources */,
@@ -415,6 +422,7 @@
 				E269D1DD295EECEF00ED3735 /* Cloud.swift in Sources */,
 				17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */,
 				E22952A328BC7AB700218A5C /* SKButton.swift in Sources */,
+				17E688743085BA1B00BDF09D /* AttributionsScene.swift in Sources */,
 				E229529D28BC04A500218A5C /* StartScene.swift in Sources */,
 				17AA134A307D635600866DC1 /* SettingsDropdown.swift in Sources */,
 				17EC0EE8307E95AB00D0A355 /* Haptics.swift in Sources */,

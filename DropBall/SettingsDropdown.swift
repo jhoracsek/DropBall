@@ -14,24 +14,40 @@ import SpriteKit
 /// setting they'd chosen.
 final class SettingsDropdown {
 
-    /// One line to restyle every label here. Others that ship with iOS and suit hand-drawn
-    /// art: `MarkerFelt-Wide`, `Noteworthy-Bold`, `Chalkduster`, `ChalkboardSE-Regular`.
-    static let fontName = "ChalkboardSE-Bold"
+    /// Pixel Operator 8 by Jayvee Enaguas, bundled with the app (CC0). This is the font's
+    /// PostScript name, which is what iOS matches on — not the filename, though the two
+    /// happen to agree here. Registered via UIAppFonts in Info.plist.
+    static let fontName = "PixelOperator8"
+
+    /// The font is drawn on an 8-pixel grid (800 units per em, 100 per pixel), so it only
+    /// lands on whole pixels at sizes that are multiples of 8. Anything else puts glyph
+    /// edges on fractions of a pixel and the lettering goes soft and uneven.
+    private static let fontGrid: CGFloat = 8
 
     // MARK: - Metrics
 
-    private static let panelWidth: CGFloat = 380
-    private static let rowHeight: CGFloat = 62
-    private static let verticalPadding: CGFloat = 16
-    private static let horizontalPadding: CGFloat = 26
-    private static let gapBelowButton: CGFloat = 12
-    private static let cornerRadius: CGFloat = 18
+    /// Size of one "pixel" in the panel's chunky edges, in scene units. Every other metric
+    /// below is a whole multiple of this so the whole panel sits on one grid.
+    private static let pixelSize: CGFloat = 6
 
-    private static let titleFontSize: CGFloat = 29
-    private static let stateFontSize: CGFloat = 25
+    /// Corner radius measured in pixels rather than points. 4 gives a visible two-step
+    /// stair; 2 is a subtle nick; 0 is a hard square corner.
+    private static let cornerPixels: Int = 4
 
-    private static let panelFill = SKColor(white: 0.05, alpha: 0.78)
-    private static let panelStroke = SKColor(white: 1.0, alpha: 0.18)
+    private static let panelWidth: CGFloat = 420        // 70 px
+    private static let rowHeight: CGFloat = 60          // 10 px
+    private static let verticalPadding: CGFloat = 18    //  3 px
+    private static let horizontalPadding: CGFloat = 24  //  4 px
+    private static let gapBelowButton: CGFloat = 12     //  2 px
+
+    // Both multiples of fontGrid. See the note on fontName. Pixel Operator runs a lot
+    // wider than the font it replaced, so these are smaller than you might expect —
+    // "Sound Effects" at 32 overflowed the panel by 63 points.
+    private static let titleFontSize: CGFloat = 24
+    private static let stateFontSize: CGFloat = 24
+
+    private static let panelFill = SKColor(white: 0.16, alpha: 0.72)
+    private static let panelStroke = SKColor(white: 1.0, alpha: 0.22)
     private static let separatorColor = SKColor(white: 1.0, alpha: 0.12)
     private static let titleColor = SKColor(white: 1.0, alpha: 0.95)
     private static let onColor = SKColor(red: 0.42, green: 0.86, blue: 0.48, alpha: 1)
@@ -41,16 +57,29 @@ final class SettingsDropdown {
 
     // MARK: - Options
 
-    /// Sound and music are wired to storage but nothing reads them yet — they become live
-    /// once there is audio to switch off.
-    private static let options: [(title: String, disabledKey: String)] = [
+    /// Music is wired to storage but nothing reads it yet — it becomes live once there is
+    /// a track to switch off.
+    ///
+    /// A nil key marks a row that performs an action instead of holding a setting; those
+    /// show a chevron rather than ON/OFF.
+    private static let options: [(title: String, disabledKey: String?)] = [
         ("Rumble", "RumbleOff"),
         ("Sound Effects", "SoundOff"),
-        ("Music", "MusicOff")
+        ("Music", "MusicOff"),
+        ("Credits", nil)
     ]
 
+    /// Called when the Credits row is tapped. Set by the scene that owns the dropdown, so
+    /// the dropdown doesn't need to know how scenes are presented.
+    var onShowCredits: (() -> Void)?
+
+    /// Called after a toggle is flipped and written, with the UserDefaults key and the new
+    /// enabled state. Lets anything that needs to react immediately — rather than at its
+    /// next natural checkpoint — do so, without the dropdown knowing what it's talking to.
+    var onSettingChanged: ((String, Bool) -> Void)?
+
     private struct Row {
-        let disabledKey: String
+        let disabledKey: String?
         let stateLabel: SKLabelNode
         let highlight: SKShapeNode
         let centerY: CGFloat
@@ -102,16 +131,79 @@ final class SettingsDropdown {
         addRows()
     }
 
+    /// A rounded rectangle whose corners are a staircase of square blocks instead of a
+    /// smooth arc, so the panel reads as pixel art next to the game's sprites.
+    ///
+    /// Turning antialiasing off alone wouldn't do it — that gives a jagged *curve*, not
+    /// chunky blocks. The geometry itself has to be quantised. The corner here is a quarter
+    /// circle snapped to the grid: a block is kept when its centre falls inside the circle.
+    ///
+    /// Returned anchored at top-centre, matching how the container is positioned: the shape
+    /// spans x of ±width/2 and y from 0 down to -height.
+    private static func pixelRoundedRect(width: CGFloat,
+                                         height: CGFloat,
+                                         cornerPixels: Int) -> CGPath {
+        let pixel = pixelSize
+        let cols = max(Int((width / pixel).rounded()), 1)
+        let rows = max(Int((height / pixel).rounded()), 1)
+        let radius = max(min(cornerPixels, min(cols, rows) / 2), 0)
+
+        // How many blocks are cut from the start of each row inside the corner square.
+        var corner = [Int](repeating: 0, count: radius)
+        for y in 0..<radius {
+            let dy = CGFloat(y) + 0.5 - CGFloat(radius)
+            var cut = 0
+            for x in 0..<radius {
+                let dx = CGFloat(x) + 0.5 - CGFloat(radius)
+                if dx*dx + dy*dy > CGFloat(radius * radius) { cut += 1 }
+            }
+            corner[y] = cut
+        }
+
+        func cut(_ row: Int) -> Int {
+            guard radius > 0 else { return 0 }
+            if row < radius { return corner[row] }
+            if row >= rows - radius { return corner[rows - 1 - row] }
+            return 0
+        }
+
+        let gridWidth = CGFloat(cols) * pixel
+        func point(_ col: Int, _ row: Int) -> CGPoint {
+            CGPoint(x: -gridWidth/2 + CGFloat(col) * pixel, y: -CGFloat(row) * pixel)
+        }
+
+        // Walked as one closed polygon rather than stacked rectangles, so it fills the same
+        // way no matter which winding rule the renderer applies.
+        let path = CGMutablePath()
+        path.move(to: point(cut(0), 0))
+
+        for row in 0..<rows {
+            let right = cols - cut(row)
+            path.addLine(to: point(right, row))       // across, into this row
+            path.addLine(to: point(right, row + 1))   // down its right edge
+        }
+        for row in stride(from: rows - 1, through: 0, by: -1) {
+            let left = cut(row)
+            path.addLine(to: point(left, row + 1))    // back across the bottom
+            path.addLine(to: point(left, row))        // up its left edge
+        }
+        path.closeSubpath()
+
+        return path
+    }
+
     private func addPanel() {
-        let rect = CGRect(x: -Self.panelWidth/2, y: -panelHeight,
-                          width: Self.panelWidth, height: panelHeight)
-        let panel = SKShapeNode(path: CGPath(roundedRect: rect,
-                                             cornerWidth: Self.cornerRadius,
-                                             cornerHeight: Self.cornerRadius,
-                                             transform: nil))
+        let panel = SKShapeNode(path: Self.pixelRoundedRect(width: Self.panelWidth,
+                                                            height: panelHeight,
+                                                            cornerPixels: Self.cornerPixels))
         panel.fillColor = Self.panelFill
         panel.strokeColor = Self.panelStroke
-        panel.lineWidth = 2
+        panel.lineWidth = 3
+
+        // Without this the stepped corners get smoothed back over and the whole point
+        // of the quantised path is lost.
+        panel.isAntialiased = false
+
         container.addChild(panel)
     }
 
@@ -121,17 +213,21 @@ final class SettingsDropdown {
 
         for (index, option) in Self.options.enumerated() {
             let centerY = -(Self.verticalPadding + Self.rowHeight/2 + CGFloat(index) * Self.rowHeight)
-            let isOn = !UserDefaults.standard.bool(forKey: option.disabledKey)
+
+            // Action rows have no stored setting, so they read as "on" only in the sense
+            // that their chevron is drawn in the same bright colour as an enabled toggle.
+            let isOn = option.disabledKey.map { !UserDefaults.standard.bool(forKey: $0) } ?? true
 
             // Sits behind the text and flashes on tap, so a row reads as pressable without
-            // needing a button frame around it.
-            let highlightRect = CGRect(x: -Self.panelWidth/2 + 6, y: centerY - Self.rowHeight/2,
-                                       width: Self.panelWidth - 12, height: Self.rowHeight)
-            let highlight = SKShapeNode(path: CGPath(roundedRect: highlightRect,
-                                                     cornerWidth: 12, cornerHeight: 12,
-                                                     transform: nil))
+            // needing a button frame around it. Inset by one pixel so it tucks inside the
+            // panel's own stepped border.
+            let highlight = SKShapeNode(path: Self.pixelRoundedRect(width: Self.panelWidth - 2 * Self.pixelSize,
+                                                                    height: Self.rowHeight,
+                                                                    cornerPixels: 2))
+            highlight.position = CGPoint(x: 0, y: centerY + Self.rowHeight/2)
             highlight.fillColor = SKColor(white: 1.0, alpha: 1.0)
             highlight.strokeColor = .clear
+            highlight.isAntialiased = false
             highlight.alpha = 0
             container.addChild(highlight)
 
@@ -140,7 +236,8 @@ final class SettingsDropdown {
             title.position = CGPoint(x: left, y: centerY)
             container.addChild(title)
 
-            let state = label(isOn ? "ON" : "OFF",
+            let isAction = option.disabledKey == nil
+            let state = label(isAction ? ">" : (isOn ? "ON" : "OFF"),
                               size: Self.stateFontSize,
                               color: isOn ? Self.onColor : Self.offColor)
             state.horizontalAlignmentMode = .right
@@ -153,9 +250,12 @@ final class SettingsDropdown {
                 path.move(to: CGPoint(x: left, y: y))
                 path.addLine(to: CGPoint(x: right, y: y))
 
+                // One pixel thick and unsmoothed, so it matches the panel's grid rather
+                // than reading as a hairline from a different design language.
                 let separator = SKShapeNode(path: path)
                 separator.strokeColor = Self.separatorColor
-                separator.lineWidth = 1
+                separator.lineWidth = Self.pixelSize
+                separator.isAntialiased = false
                 container.addChild(separator)
             }
 
@@ -245,7 +345,7 @@ final class SettingsDropdown {
         }
 
         for index in rows.indices where abs(local.y - rows[index].centerY) <= Self.rowHeight/2 {
-            toggle(rowAt: index)
+            activate(rowAt: index)
             return true
         }
 
@@ -253,15 +353,31 @@ final class SettingsDropdown {
         return true
     }
 
-    private func toggle(rowAt index: Int) {
-        rows[index].isOn.toggle()
+    private func activate(rowAt index: Int) {
         let row = rows[index]
 
-        UserDefaults.standard.set(!row.isOn, forKey: row.disabledKey)
+        flash(row)
 
-        row.stateLabel.text = row.isOn ? "ON" : "OFF"
-        row.stateLabel.fontColor = row.isOn ? Self.onColor : Self.offColor
+        // An action row has no setting to flip; it just runs and closes the menu so the
+        // panel isn't left hanging over whatever it navigated to.
+        guard let key = row.disabledKey else {
+            setExpanded(false)
+            onShowCredits?()
+            return
+        }
 
+        rows[index].isOn.toggle()
+        let isOn = rows[index].isOn
+
+        UserDefaults.standard.set(!isOn, forKey: key)
+
+        row.stateLabel.text = isOn ? "ON" : "OFF"
+        row.stateLabel.fontColor = isOn ? Self.onColor : Self.offColor
+
+        onSettingChanged?(key, isOn)
+    }
+
+    private func flash(_ row: Row) {
         row.highlight.removeAllActions()
         row.highlight.alpha = 0.16
         row.highlight.run(SKAction.fadeAlpha(to: 0, duration: 0.22))
