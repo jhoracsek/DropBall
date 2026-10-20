@@ -158,6 +158,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		176731403087D1CD00C18A54 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				17E688753085BF2E00BDF09D /* music_world_of_nowhere.m4a */,
+				17E688773085BF3300BDF09D /* music_your_tomorrow.m4a */,
+				17E688793085BF3800BDF09D /* music_so_do_i.m4a */,
+				17E6887B3085BF3D00BDF09D /* music_with_my_name.m4a */,
+				17E6887D3085BF4100BDF09D /* music_first_memories.m4a */,
+				17E6886930854A0700BDF09D /* bounce1.wav */,
+				17E6886B30854A0A00BDF09D /* bounce2.wav */,
+				17E6886D30854A0D00BDF09D /* bounce3.wav */,
+				17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		E2980AD1294BB84F00FD8951 /* CoreData */ = {
 			isa = PBXGroup;
 			children = (
@@ -193,6 +209,7 @@
 			children = (
 				E2604EAE2EBE8D13003AA4DD /* Settings.swift */,
 				E2980AD1294BB84F00FD8951 /* CoreData */,
+				176731403087D1CD00C18A54 /* Resources */,
 				E2BF96AF2821C65E000A2B9C /* AppDelegate.swift */,
 				E2604EAA2EBE6B04003AA4DD /* SettingsScene.sks */,
 				E2604EAC2EBE6B0E003AA4DD /* SettingsScene.swift */,
@@ -221,20 +238,11 @@
 				170CB8AD307B5B5700CC74A5 /* WindStreaks.swift */,
 				173F56C2307BEB6700CB6923 /* DebugOverlay.swift */,
 				17AA1349307D635600866DC1 /* SettingsDropdown.swift */,
-				17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */,
 				17EC0EE7307E95AB00D0A355 /* Haptics.swift */,
 				17E6886730852B3400BDF09D /* Diagnostics.swift */,
-				17E6886930854A0700BDF09D /* bounce1.wav */,
-				17E6886B30854A0A00BDF09D /* bounce2.wav */,
-				17E6886D30854A0D00BDF09D /* bounce3.wav */,
 				17E6886F30854A4300BDF09D /* Audio.swift */,
 				17E688713085B9F300BDF09D /* Attributions.swift */,
 				17E688733085BA1B00BDF09D /* AttributionsScene.swift */,
-				17E688753085BF2E00BDF09D /* music_world_of_nowhere.m4a */,
-				17E688773085BF3300BDF09D /* music_your_tomorrow.m4a */,
-				17E688793085BF3800BDF09D /* music_so_do_i.m4a */,
-				17E6887B3085BF3D00BDF09D /* music_with_my_name.m4a */,
-				17E6887D3085BF4100BDF09D /* music_first_memories.m4a */,
 				17E6887F3085BF6600BDF09D /* Music.swift */,
 				1767313E3087C7AB00C18A54 /* BallTrail.swift */,
 			);
