@@ -87,6 +87,14 @@ class Entity {
     var spriteName: String?
     
     var particles: SKEmitterNode?
+
+    /// Held strongly on purpose. `SKEmitterNode.targetNode` is a *weak* property, but
+    /// SpriteKit's internal particle code caches a raw pointer to it. If the target is
+    /// released while the emitter is still birthing particles, that cached pointer dangles
+    /// and runBirthSimulation() dereferences it — a main-thread EXC_BAD_ACCESS inside
+    /// SKCEmitterNode with no Swift frame anywhere in the backtrace.
+    private var particleTarget: SKNode?
+
     private var wind: WindStreaks?
     var fingerPosition: CGFloat =  0
 
@@ -126,6 +134,10 @@ class Entity {
     /// Particles emitted per second at full speed. The single biggest lever on how heavy
     /// the trail reads.
     let trailBirthRate : CGFloat = 260
+
+    /// Ceiling on the fall speed handed to the emitter, as a multiple of referenceSpeed.
+    /// Normal play peaks around 1.2x, so this only bites on an unbounded fall.
+    static let maxTrailSpeedFactor : CGFloat = 2
 
     /// Length of the landing squash, in frames.
     let squashDuration : CGFloat = 9
@@ -194,6 +206,7 @@ class Entity {
         }
 
         particles = emitter
+        particleTarget = target
 
         emitter.name = "sparkEmitter"
         emitter.targetNode = target
@@ -251,6 +264,24 @@ class Entity {
     func stopEffects(){
         boosting = false
         particles?.particleBirthRate = 0
+    }
+
+    /// Tears the emitter down before its target node can go away.
+    ///
+    /// Zeroing the birth rate only stops *new* particles; the ones already alive keep being
+    /// simulated against the target. resetSimulation() discards those too, so nothing is
+    /// left referring to a node that is about to be released.
+    func teardownEffects(){
+        boosting = false
+
+        particles?.particleBirthRate = 0
+        particles?.resetSimulation()
+        particles?.targetNode = nil
+        particles?.removeFromParent()
+        particles = nil
+        particleTarget = nil
+
+        wind = nil
     }
 
     /// 0 when the ball is barely moving, 1 once it reaches referenceSpeed. Drives the
@@ -425,8 +456,20 @@ class Entity {
         particles.particleBirthRate = trailBirthRate * fallSpeedRatio
 
         // yVel is per frame; the emitter wants points per second.
-        particles.particleSpeed = abs(yVel) * 60
-        particles.particleSpeedRange = abs(yVel) * 12
+        //
+        // Clamped, which the original wasn't. Nothing bounds yVel during a long fall — and
+        // with No Clip on the ball accelerates indefinitely — so this fed numbers that grew
+        // without limit straight into SpriteKit's particle maths. The ceiling is generous
+        // enough that normal play never reaches it (yVel peaks around 1.2x referenceSpeed
+        // between platforms), so the look is unchanged.
+        let impactSpeed = min(abs(yVel), referenceSpeed * Entity.maxTrailSpeedFactor)
+        guard impactSpeed.isFinite else {
+            particles.particleBirthRate = 0
+            return
+        }
+
+        particles.particleSpeed = impactSpeed * 60
+        particles.particleSpeedRange = impactSpeed * 12
     }
 
     /// Stretches the ball along its direction of travel and squashes it on impact.
