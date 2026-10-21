@@ -426,31 +426,12 @@ class GameScene: SKScene {
     }
     
     func save(){
-        let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
-        let newScore = Score(context: context)
-
-        newScore.name = "None"
-        newScore.score = Int64(self.score)
-        AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
+        ScoreStore.record(score)
     }
     
     var gameLost = false
     var shake = false
     var shakeDuration = 20
-    
-    var scores = [Score]()
-    func getScores(){
-        let fet: NSFetchRequest<Score> = Score.fetchRequest()
-        fet.fetchLimit = 1
-        let byScore = NSSortDescriptor(key: #keyPath(Score.score), ascending: false)
-        fet.sortDescriptors = [byScore]
-        do{
-            let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
-            self.scores = try context.fetch(fet)
-        } catch let error as NSError{
-            print("Fetch error: \(error) description: \(error.userInfo)")
-        }
-    }
     
     func shakeScreen(){
         let randomX = CGFloat.random(in:-10...10)
@@ -477,11 +458,10 @@ class GameScene: SKScene {
         ball.stopEffects()
 
         save()
-        getScores()
 
-        // save() has just inserted this run's score, so there is normally at least one row.
-        // Fall back to the current score rather than trapping if the fetch comes back empty.
-        scoreBest.setScore(score: Int(scores.first?.score ?? Int64(score)))
+        // save() has just recorded this run, so there is normally at least one row. Fall
+        // back to the current score rather than trapping if the fetch comes back empty.
+        scoreBest.setScore(score: ScoreStore.best() ?? score)
         
         for sc in scoreDisplay.getSpriteNode(){
             sc.alpha = 0

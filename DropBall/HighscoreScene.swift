@@ -7,7 +7,6 @@
 
 import SpriteKit
 import GameplayKit
-import CoreData
 
 class HighscoreScene: SKScene {
     let HEIGHT : CGFloat = GameViewController.HEIGHT
@@ -36,16 +35,7 @@ class HighscoreScene: SKScene {
     #endif
     
     func getScores(){
-        let fet: NSFetchRequest<Score> = Score.fetchRequest()
-        fet.fetchLimit = 50
-        let byScore = NSSortDescriptor(key: #keyPath(Score.score), ascending: false)
-        fet.sortDescriptors = [byScore]
-        do{
-            let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
-            self.scores = try context.fetch(fet)
-        } catch let error as NSError{
-            print("Fetch error: \(error) description: \(error.userInfo)")
-        }
+        scores = ScoreStore.top()
     }
     
     func go_home(){
@@ -129,6 +119,15 @@ class HighscoreScene: SKScene {
             lineHolder.append(divider)
         }
         offsetMax = offset
+
+        // On a fresh install the panel is otherwise a blank grey rectangle, which reads as
+        // a loading failure rather than "you haven't played yet".
+        if scores.isEmpty {
+            for node in emptyStateLabels() {
+                cropNode.addChild(node)
+            }
+        }
+
         cropNode.position = CGPoint(x:6, y:-51)
         cropNode.maskNode = mask
         addChild(cropNode)
@@ -137,6 +136,30 @@ class HighscoreScene: SKScene {
         #if DEBUG
         setUpDebugOverlay()
         #endif
+    }
+
+    /// The two lines shown in place of the list when nothing has been saved yet, positioned
+    /// in the crop node's own coordinates so (0,0) is the middle of the visible panel.
+    private func emptyStateLabels() -> [SKLabelNode] {
+        let headline = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+        headline.text = "NO SCORES YET"
+        headline.fontSize = 32
+        headline.fontColor = SKColor(white: 1.0, alpha: 0.92)
+        headline.verticalAlignmentMode = .center
+        headline.position = CGPoint(x: 0, y: 20)
+
+        let subline = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+        subline.text = "Play a round to set one"
+        subline.fontSize = 16
+        subline.fontColor = SKColor(white: 1.0, alpha: 0.55)
+        subline.verticalAlignmentMode = .center
+        subline.position = CGPoint(x: 0, y: -20)
+
+        for label in [headline, subline] {
+            label.zPosition = 50
+        }
+
+        return [headline, subline]
     }
 
     #if DEBUG
@@ -159,24 +182,8 @@ class HighscoreScene: SKScene {
     }
 
     /// Deletes every saved score, then rebuilds the screen so the change is visible.
-    ///
-    /// Deleted one at a time through the managed context rather than with an
-    /// NSBatchDeleteRequest: a batch delete goes straight to the store and leaves the
-    /// context holding objects that no longer exist, which would need a separate merge or
-    /// reset. The table is small enough that it isn't worth the complication.
     private func resetScores(){
-        let context = AppDelegate.sharedAppDelegate.coreDataStack.managedContext
-        let request: NSFetchRequest<Score> = Score.fetchRequest()
-
-        do {
-            for row in try context.fetch(request) {
-                context.delete(row)
-            }
-            AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
-        } catch let error as NSError {
-            print("Reset error: \(error) description: \(error.userInfo)")
-        }
-
+        ScoreStore.removeAll()
         reloadScene()
     }
 
