@@ -26,14 +26,27 @@ final class BallTrail {
     private static let capacity = 160
 
     /// Particles per second at full speed.
-    private static let birthRate: CGFloat = 260
+    private static let birthRate: CGFloat = 210
 
     private static let lifetime: CGFloat = 0.45
     private static let lifetimeRange: CGFloat = 0.20
 
-    private static let startScale: CGFloat = 0.28
-    private static let scaleRange: CGFloat = 0.14
-    private static let scaleDecayPerSecond: CGFloat = 0.55
+    /// Size of the particle texture, in texels. Smaller means chunkier blocks on screen for
+    /// the same on-screen size, since each texel covers more of it.
+    private static let textureTexels = 8
+
+    /// How many texels to chamfer off each corner. 0 gives a hard square, 1 a square with
+    /// its corners nipped, 2 the octagon this started as.
+    private static let cornerCut = 1
+
+    // Stated in points rather than as a scale factor, so they stay meaningful if the
+    // texture's resolution changes.
+    private static let startSize: CGFloat = 15
+    private static let sizeRange: CGFloat = 7.5
+
+    /// Fraction of its birth size a particle loses per second. 1.95 takes it to roughly a
+    /// tenth by the end of an average lifetime.
+    private static let shrinkPerSecond: CGFloat = 1.95
 
     private static let startAlpha: CGFloat = 0.60
     private static let alphaDecayPerSecond: CGFloat = 1.40
@@ -42,8 +55,12 @@ final class BallTrail {
     private static let emissionAngle: CGFloat = .pi / 2
     private static let emissionSpread: CGFloat = 0.22
 
-    /// Warm orange, taken from the original Particle.sks so the look is unchanged.
-    private static let tint = SKColor(red: 0.305, green: 0.130, blue: 0.023, alpha: 1.0)
+    /// Warm orange, originally taken from Particle.sks and since nudged towards red.
+    ///
+    /// Shifted mostly by easing green down rather than pushing red up: green is what makes
+    /// the colour read as orange, and with additive blending raising red would have
+    /// brightened the trail as well as recolouring it.
+    private static let tint = SKColor(red: 0.365, green: 0.080, blue: 0.018, alpha: 1.0)
 
     /// The whole simulation is frame-based elsewhere in this game, so a fixed step keeps it
     /// consistent with everything else rather than introducing delta timing in one place.
@@ -73,7 +90,7 @@ final class BallTrail {
         container.zPosition = 1.5
         target.addChild(container)
 
-        let texture = SKTexture(imageNamed: "spark")
+        let texture = Self.makePixelTexture()
         particles.reserveCapacity(Self.capacity)
 
         for _ in 0..<Self.capacity {
@@ -87,6 +104,48 @@ final class BallTrail {
 
             particles.append(Particle(sprite: sprite))
         }
+    }
+
+    /// Builds the particle texture in code: a chunky octagon with hard edges.
+    ///
+    /// Replaces the bundled `spark` art, which is a soft radial gradient — 182 distinct
+    /// alpha values fading smoothly to nothing — and therefore reads as a blur no matter how
+    /// it's filtered. A hard-edged shape at low resolution, drawn with nearest-neighbour
+    /// filtering so it isn't smoothed back out when scaled up, is what makes it look drawn
+    /// on a pixel grid.
+    ///
+    /// The shape is a square with its corners chamfered by `cornerCut` texels. A texel is
+    /// dropped when its combined distance from the two nearest edges falls short of that,
+    /// which clips a neat triangle from each corner — so the amount of rounding is stated
+    /// directly rather than falling out of a circle equation.
+    private static func makePixelTexture() -> SKTexture {
+        let size = textureTexels
+
+        // White, so colorBlendFactor can tint it to anything without fighting the art.
+        var pixels = [UInt8](repeating: 0, count: size * size * 4)
+
+        for y in 0..<size {
+            for x in 0..<size {
+                let fromVerticalEdge = min(x, size - 1 - x)
+                let fromHorizontalEdge = min(y, size - 1 - y)
+                guard fromVerticalEdge + fromHorizontalEdge >= cornerCut else { continue }
+
+                let i = (y * size + x) * 4
+                pixels[i] = 255
+                pixels[i + 1] = 255
+                pixels[i + 2] = 255
+                pixels[i + 3] = 255
+            }
+        }
+
+        let texture = SKTexture(data: Data(pixels),
+                                size: CGSize(width: size, height: size))
+
+        // Without this the texture is bilinearly smoothed on the way up to its on-screen
+        // size, which would undo the whole point.
+        texture.filteringMode = .nearest
+
+        return texture
     }
 
     /// Call once per frame.
@@ -129,8 +188,10 @@ final class BallTrail {
             sprite.position.y += velocity.dy * Self.step
 
             // Linear decay, matching how the emitter's scaleSpeed and alphaSpeed behaved.
-            let scale = particles[i].baseScale - Self.scaleDecayPerSecond * age
-            sprite.setScale(max(scale, 0.01))
+            // Shrink is proportional to the birth size, so it behaves the same whatever
+            // size the particle happened to spawn at.
+            let shrink = max(0, 1 - Self.shrinkPerSecond * age)
+            sprite.setScale(particles[i].baseScale * shrink)
             sprite.alpha = max(Self.startAlpha - Self.alphaDecayPerSecond * age, 0)
         }
     }
@@ -149,7 +210,10 @@ final class BallTrail {
         sprite.isHidden = false
         sprite.alpha = Self.startAlpha
 
-        let baseScale = Self.startScale + CGFloat.random(in: -Self.scaleRange/2...Self.scaleRange/2)
+        // Converted from points to a scale factor against the texture's texel count, so the
+        // on-screen size is independent of the texture's resolution.
+        let points = Self.startSize + CGFloat.random(in: -Self.sizeRange/2...Self.sizeRange/2)
+        let baseScale = points / CGFloat(Self.textureTexels)
         sprite.setScale(baseScale)
 
         particles[index].velocity = CGVector(dx: cos(angle) * speed, dy: sin(angle) * speed)
