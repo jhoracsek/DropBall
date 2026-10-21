@@ -11,6 +11,7 @@
 		173F56C3307BEB6700CB6923 /* DebugOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 173F56C2307BEB6700CB6923 /* DebugOverlay.swift */; };
 		17541948307AC48B00FEAC5F /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17541947307AC48B00FEAC5F /* SceneDelegate.swift */; };
 		1767313F3087C7AB00C18A54 /* BallTrail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1767313E3087C7AB00C18A54 /* BallTrail.swift */; };
+		176731423088468100C18A54 /* BackgroundOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176731413088468100C18A54 /* BackgroundOverlay.swift */; };
 		17AA134A307D635600866DC1 /* SettingsDropdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17AA1349307D635600866DC1 /* SettingsDropdown.swift */; };
 		17AA134C307DAAF200866DC1 /* PixelOperator8.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */; };
 		17E6886830852B3400BDF09D /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E6886730852B3400BDF09D /* Diagnostics.swift */; };
@@ -80,6 +81,7 @@
 		173F56C2307BEB6700CB6923 /* DebugOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugOverlay.swift; sourceTree = "<group>"; };
 		17541947307AC48B00FEAC5F /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		1767313E3087C7AB00C18A54 /* BallTrail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BallTrail.swift; sourceTree = "<group>"; };
+		176731413088468100C18A54 /* BackgroundOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundOverlay.swift; sourceTree = "<group>"; };
 		17AA1349307D635600866DC1 /* SettingsDropdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDropdown.swift; sourceTree = "<group>"; };
 		17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = PixelOperator8.ttf; sourceTree = "<group>"; };
 		17E6886730852B3400BDF09D /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
@@ -245,6 +247,7 @@
 				17E688733085BA1B00BDF09D /* AttributionsScene.swift */,
 				17E6887F3085BF6600BDF09D /* Music.swift */,
 				1767313E3087C7AB00C18A54 /* BallTrail.swift */,
+				176731413088468100C18A54 /* BackgroundOverlay.swift */,
 			);
 			path = DropBall;
 			sourceTree = "<group>";
@@ -422,6 +425,7 @@
 				E2980AD3294BB87400FD8951 /* CoreDataStack.swift in Sources */,
 				E2E28ACC282781FF001F8935 /* mod.swift in Sources */,
 				E2BF96B62821C65E000A2B9C /* GameScene.swift in Sources */,
+				176731423088468100C18A54 /* BackgroundOverlay.swift in Sources */,
 				E2604EAF2EBE8D1A003AA4DD /* Settings.swift in Sources */,
 				E2BF96B82821C65E000A2B9C /* GameViewController.swift in Sources */,
 				17E688803085BF6600BDF09D /* Music.swift in Sources */,

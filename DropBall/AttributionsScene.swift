@@ -75,6 +75,9 @@ final class AttributionsScene: SKScene {
         background.zPosition = -1
         addChild(background)
 
+        // Over the gradient, under the mountains (-0.9).
+        addChild(BackgroundOverlay.make())
+
         mountains.anchorPoint = CGPoint(x: 0, y: 0)
         mountains.position = CGPoint(x: -WIDTH/2, y: -HEIGHT/2)
         mountains.zPosition = -0.9

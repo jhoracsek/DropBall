@@ -81,6 +81,11 @@ class StartScene: SKScene {
         background.position.y = GameViewController.HEIGHT/2
         background.zPosition = -20
         self.addChild(background)
+
+        // This scene stacks its layers differently from the others — background at -20,
+        // clouds from 1 to 14, mountains at 3 — so the overlay goes just above the
+        // gradient rather than at the shared default.
+        addChild(BackgroundOverlay.make(z: -19))
         
         addChild(ball.getSpriteNode())
         ball.setScale(scale: 0.75)

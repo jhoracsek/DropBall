@@ -68,6 +68,9 @@ class HighscoreScene: SKScene {
         background.position.y = GameViewController.HEIGHT/2
         self.addChild(background)
         background.zPosition = -1
+
+        // Over the gradient, under the mountains (-0.9).
+        addChild(BackgroundOverlay.make())
         addChild(scoreOverlay)
         scoreOverlay.zPosition = 10
         
