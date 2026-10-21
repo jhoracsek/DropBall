@@ -66,6 +66,17 @@ enum Attributions {
             modifications: nil
         ),
         Attribution(
+            title: "Stringstar Fields",
+            author: "Trixie (trixelized)",
+            licence: "MIT",
+            licenceURL: "https://opensource.org/license/mit",
+            sourceURL: "https://trixelized.itch.io/starstring-fields",
+            displayLink: "trixelized.itch.io",
+            // MIT permits modification without requiring it to be declared, but saying so
+            // costs nothing. Adjust if the art was used differently from this.
+            modifications: "Adapted for the background layers"
+        ),
+        Attribution(
             title: "Pixel Operator",
             author: "Jayvee Enaguas (HarvettFox96)",
             licence: "CC0 1.0 (Public Domain)",
