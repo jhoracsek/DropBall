@@ -28,8 +28,8 @@ enum BackgroundOverlay {
     /// Drift speeds in points per second. Slow on purpose — this should register as
     /// movement without drawing the eye. The bottom is slower still, so the parallax reads
     /// as the clouds being further away than the specks.
-    static let topSpeed: CGFloat = 12
-    static let bottomSpeed: CGFloat = 5
+    static let topSpeed: CGFloat = 15
+    static let bottomSpeed: CGFloat = 9
 
     /// Width of the single-piece overlay these two bands were cut from. Both are scaled by
     /// the factor that mapped *that* width to the screen, which keeps the texture exactly
