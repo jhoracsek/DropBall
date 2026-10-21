@@ -161,24 +161,42 @@ enum BackgroundOverlay {
         }
 
         // Pick up where the last scene left off. The texture repeats every `width`, so only
-        // the remainder matters: left-moving bands land in (-width, 0] and right-moving in
-        // [0, width), which are the ranges the two-copy layout is built to cover.
+        // the remainder matters.
         let phase = (elapsed * speed).truncatingRemainder(dividingBy: width)
         container.position.x = movingLeft ? -phase : phase
 
-        // Slide exactly one strip width, then snap back instantly. The snap is relative, so
-        // it works from any starting offset; and because the second copy sits exactly one
-        // width along, it lands precisely where the first was, making the restart invisible.
-        //
-        // An action rather than per-frame work, so this needs no update() wiring and runs
-        // identically in all four scenes — including AttributionsScene, which has none.
         let distance = movingLeft ? -width : width
-        let duration = TimeInterval(width / speed)
 
-        container.run(.repeatForever(.sequence([
-            .moveBy(x: distance, y: 0, duration: duration),
+        // Finish the cycle already in progress, then loop from the top.
+        //
+        // This first leg matters. The repeating cycle below is a *relative* move, so running
+        // it straight from a phase-shifted start would carry the container a full width
+        // beyond that offset — up to two widths from the origin, which is outside the range
+        // two copies can span. The band then scrolls clear of the screen and nothing is drawn
+        // until the trailing copy arrives. A large phase broke it and a small one didn't,
+        // which is why it looked intermittent and differed from scene to scene.
+        //
+        // Covering the remainder first lands the container exactly on the origin, so the
+        // loop runs canonically from there and never leaves bounds.
+        let remaining = width - phase
+        let catchUp = SKAction.sequence([
+            .moveBy(x: movingLeft ? -remaining : remaining, y: 0,
+                    duration: TimeInterval(remaining / speed)),
             .moveBy(x: -distance, y: 0, duration: 0)
-        ])))
+        ])
+
+        // Slide exactly one strip width, then snap back instantly. Because the second copy
+        // sits exactly one width along, the snap lands it precisely where the first was,
+        // making the restart invisible.
+        //
+        // Actions rather than per-frame work, so this needs no update() wiring and runs
+        // identically in all four scenes — including AttributionsScene, which has none.
+        let cycle = SKAction.sequence([
+            .moveBy(x: distance, y: 0, duration: TimeInterval(width / speed)),
+            .moveBy(x: -distance, y: 0, duration: 0)
+        ])
+
+        container.run(.sequence([catchUp, .repeatForever(cycle)]))
 
         return container
     }
