@@ -67,6 +67,74 @@ enum BackgroundOverlay {
     /// wall-clock, so a clock change can't make it jump.
     private static let epoch = CACurrentMediaTime()
 
+    /// Where each band begins, as a fraction of its width, drawn once per launch so the
+    /// background doesn't open on the same stretch of texture every time.
+    ///
+    /// Deliberately `static let` and therefore resolved once per process, not per scene —
+    /// drawing a fresh number for each scene would undo the continuity above and make the
+    /// background jump on every transition. The two bands get independent values so they
+    /// don't start aligned with each other.
+    private static let topStartFraction = CGFloat.random(in: 0..<1)
+    private static let bottomStartFraction = CGFloat.random(in: 0..<1)
+
+    /// Why the drift is currently stopped. More than one thing can stop it at once — the
+    /// game being paused and the app being sent to the background, in particular — and the
+    /// clock should only resume once *every* reason has gone away.
+    ///
+    /// Tracking reasons by name rather than counting makes each caller idempotent: repeating
+    /// `setPaused(true, reason: .game)` is harmless, and clearing a reason that was never
+    /// set can't unbalance anything.
+    enum PauseReason {
+        case game
+        case appInactive
+    }
+
+    private static var pauseReasons: Set<PauseReason> = []
+
+    /// When the current pause began, and how long has been spent paused in total.
+    ///
+    /// Both are needed because the drift is derived from the clock. Freezing the nodes stops
+    /// them moving, but the clock keeps running — so without discounting that time, a scene
+    /// built after the pause would compute a position as though the background had carried
+    /// on, and jump forward on the transition.
+    private static var pauseBegan: CFTimeInterval?
+    private static var pausedTotal: CFTimeInterval = 0
+
+    /// Seconds of drift so far, excluding any time spent paused.
+    private static var driftTime: CGFloat {
+        // Clamped at zero because `epoch` initialises lazily: on the very first call Swift
+        // evaluates CACurrentMediaTime() before initialising it, which would otherwise give
+        // a small negative elapsed time and invert the starting offset.
+        let now = CACurrentMediaTime()
+        let paused = pausedTotal + (pauseBegan.map { now - $0 } ?? 0)
+        return max(0, CGFloat(now - epoch - paused))
+    }
+
+    /// Stops or resumes the drift for one reason, and keeps the clock honest while stopped.
+    ///
+    /// The caller is responsible for freezing the node itself where that's needed. Going to
+    /// the background doesn't need it — iOS stops the render loop, so the actions can't
+    /// advance anyway — but an in-game pause does, since the loop keeps running.
+    static func setPaused(_ paused: Bool, reason: PauseReason) {
+        let wasStopped = !pauseReasons.isEmpty
+
+        if paused {
+            pauseReasons.insert(reason)
+        } else {
+            pauseReasons.remove(reason)
+        }
+
+        let isStopped = !pauseReasons.isEmpty
+        guard wasStopped != isStopped else { return }
+
+        if isStopped {
+            pauseBegan = CACurrentMediaTime()
+        } else if let began = pauseBegan {
+            pausedTotal += CACurrentMediaTime() - began
+            pauseBegan = nil
+        }
+    }
+
     static func make(z: CGFloat = defaultZ) -> SKNode {
         let root = SKNode()
         root.zPosition = z
@@ -75,10 +143,8 @@ enum BackgroundOverlay {
         let scale = GameViewController.WIDTH / sourceArtWidth
 
         // Read once and shared by both bands, so they're guaranteed to be in phase with
-        // each other. Clamped at zero because `epoch` initialises lazily: on the very first
-        // call Swift evaluates CACurrentMediaTime() before initialising it, which would
-        // otherwise give a small negative elapsed time and invert the starting offset.
-        let elapsed = max(0, CGFloat(CACurrentMediaTime() - epoch))
+        // each other rather than sampling the clock a fraction apart.
+        let elapsed = driftTime
 
         let topTexture = SKTexture(imageNamed: "bg_overlay_top")
         let bottomTexture = SKTexture(imageNamed: "bg_overlay_bottom")
@@ -118,12 +184,14 @@ enum BackgroundOverlay {
 
         let top = band(texture: topTexture, scale: scale,
                        speed: topSpeed, movingLeft: true, elapsed: elapsed,
+                       startFraction: topStartFraction,
                        verticalCopies: topCopies)
         top.position.y = bottomTop + topHeight/2
         root.addChild(top)
 
         let bottom = band(texture: bottomTexture, scale: scale,
                           speed: bottomSpeed, movingLeft: false, elapsed: elapsed,
+                          startFraction: bottomStartFraction,
                           verticalCopies: 1)
         bottom.position.y = bottomTop - bottomHeight/2
         root.addChild(bottom)
@@ -137,6 +205,7 @@ enum BackgroundOverlay {
                              speed: CGFloat,
                              movingLeft: Bool,
                              elapsed: CGFloat,
+                             startFraction: CGFloat,
                              verticalCopies: Int) -> SKNode {
         let container = SKNode()
 
@@ -160,9 +229,11 @@ enum BackgroundOverlay {
             }
         }
 
-        // Pick up where the last scene left off. The texture repeats every `width`, so only
-        // the remainder matters.
-        let phase = (elapsed * speed).truncatingRemainder(dividingBy: width)
+        // Pick up where the last scene left off, offset by this launch's random start. The
+        // texture repeats every `width`, so only the remainder matters — which also keeps
+        // the result inside [0, width) whatever the random offset was.
+        let travelled = elapsed * speed + startFraction * width
+        let phase = travelled.truncatingRemainder(dividingBy: width)
         container.position.x = movingLeft ? -phase : phase
 
         let distance = movingLeft ? -width : width

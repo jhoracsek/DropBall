@@ -57,8 +57,18 @@ class GameScene: SKScene {
             // Driven from here rather than from the pause and resume button closures so
             // that any future path which pauses the game is covered automatically.
             ball.setEffectsPaused(gamePaused)
+
+            // Two parts: freezing the node stops the drift on screen, and telling
+            // BackgroundOverlay discounts the paused time from its clock. Without the
+            // second, the next scene would compute a position as though the background had
+            // kept drifting, and jump on the transition.
+            backgroundOverlay?.isPaused = gamePaused
+            BackgroundOverlay.setPaused(gamePaused, reason: .game)
         }
     }
+
+    /// Held so the drift can be frozen while paused.
+    private var backgroundOverlay: SKNode?
     
     let scoreDisplay = ScoreDisplay(posX:0, posY:300)
     
@@ -102,7 +112,9 @@ class GameScene: SKScene {
         background.zPosition = -1
 
         // Over the gradient, under the mountains (-0.9).
-        addChild(BackgroundOverlay.make())
+        let overlay = BackgroundOverlay.make()
+        addChild(overlay)
+        backgroundOverlay = overlay
         
         addChild(pauseText)
         pauseText.zPosition = 50
@@ -560,6 +572,12 @@ class GameScene: SKScene {
     /// means it can never outlive what it points at.
     override func willMove(from view: SKView) {
         ball.teardownEffects()
+
+        // The pause clock is global, so leaving it stopped here would freeze the background
+        // in every subsequent scene. Not currently reachable — there's no way to leave a
+        // paused game — but cheap to guarantee. Clears only this scene's reason, so a
+        // concurrent app-background pause is left intact.
+        BackgroundOverlay.setPaused(false, reason: .game)
 
         #if DEBUG
         Diagnostics.reset()
