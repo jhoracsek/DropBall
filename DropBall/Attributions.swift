@@ -30,13 +30,19 @@ struct Attribution {
     /// What was changed, if anything. CC BY requires saying so; nil means used as supplied.
     let modifications: String?
 
+    /// The licence reproduced in full, for licences that require the text itself to ship
+    /// rather than just a notice and a link. Paragraphs separated by blank lines; the
+    /// credits screen re-flows them to fit. Nil where a link is enough.
+    let licenceText: String?
+
     init(title: String,
          author: String,
          licence: String,
          licenceURL: String? = nil,
          sourceURL: String? = nil,
          displayLink: String? = nil,
-         modifications: String? = nil) {
+         modifications: String? = nil,
+         licenceText: String? = nil) {
         self.title = title
         self.author = author
         self.licence = licence
@@ -44,6 +50,40 @@ struct Attribution {
         self.sourceURL = sourceURL
         self.displayLink = displayLink
         self.modifications = modifications
+        self.licenceText = licenceText
+    }
+}
+
+/// Full licence texts, for the licences that require shipping the text itself.
+enum Licences {
+
+    /// The MIT licence, verbatim, with the copyright line filled in.
+    ///
+    /// MIT asks that "the above copyright notice and this permission notice" travel with
+    /// every copy — a link to the terms doesn't discharge that, so the text ships in the app.
+    static func mit(copyright: String) -> String {
+        """
+        MIT License
+
+        Copyright (c) \(copyright)
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy of \
+        this software and associated documentation files (the "Software"), to deal in the \
+        Software without restriction, including without limitation the rights to use, copy, \
+        modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, \
+        and to permit persons to whom the Software is furnished to do so, subject to the \
+        following conditions:
+
+        The above copyright notice and this permission notice shall be included in all \
+        copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, \
+        INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A \
+        PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT \
+        HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION \
+        OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE \
+        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        """
     }
 }
 
@@ -74,7 +114,11 @@ enum Attributions {
             displayLink: "trixelized.itch.io",
             // MIT permits modification without requiring it to be declared, but saying so
             // costs nothing. Adjust if the art was used differently from this.
-            modifications: "Adapted for the background layers"
+            modifications: "Adapted for the background layers",
+            // Neither the itch.io page nor the download carries a copyright line, so the
+            // author's name stands in for one. Replace this with the exact notice if Trixie
+            // provides one.
+            licenceText: Licences.mit(copyright: "Trixie (trixelized)")
         ),
         Attribution(
             title: "Pixel Operator",

@@ -26,6 +26,14 @@ final class AttributionsScene: SKScene {
     private static let titleSize: CGFloat = 24
     private static let bodySize: CGFloat = 16
 
+    /// Licence boilerplate is set tighter than the list rows — it's there to be complete,
+    /// not to be read at a glance, and 26pt leading over thirty-odd lines swamps the page.
+    private static let licenceLineSpacing: CGFloat = 19
+
+    /// Left inset applied to every row, and so the amount the usable width is reduced by on
+    /// each side.
+    private static let textInset: CGFloat = 20
+
     // Dark, because the sky behind this screen averages around 195 of 255 in luminance.
     // The white used before only worked against the panel; on the sky it comes out at
     // roughly 1.75:1 contrast, well under the 4.5:1 that's readable. These sit near 8:1.
@@ -58,6 +66,13 @@ final class AttributionsScene: SKScene {
 
     /// Tappable regions, in content-local coordinates, paired with what they open.
     private var links: [(range: ClosedRange<CGFloat>, url: URL)] = []
+
+    /// Tappable regions that expand a bundled licence, keyed by the entry's title.
+    private var disclosures: [(range: ClosedRange<CGFloat>, title: String)] = []
+
+    /// Which licence texts are currently unfolded. Collapsed on every visit — the text is
+    /// there to be available, not to be read every time.
+    private var expandedLicences: Set<String> = []
 
     // MARK: - Setup
 
@@ -102,6 +117,53 @@ final class AttributionsScene: SKScene {
         buildList()
     }
 
+    /// Greedily breaks `text` into lines that fit `width`, measuring with the real font
+    /// rather than counting characters.
+    ///
+    /// Pixel Operator is proportional, not monospace: at 16pt a lowercase "i" is under 10
+    /// points wide and a capital "W" is 18, so a fixed column count either wraps prose far
+    /// too early or lets the licence's all-caps warranty paragraph run off the panel.
+    /// Paragraphs are separated by blank lines and re-flowed, so the stored text doesn't
+    /// have to be pre-wrapped to any particular width.
+    private func wrap(_ text: String, size: CGFloat, width: CGFloat) -> [String] {
+        // One reused node for every measurement; SKLabelNode reports its width as soon as
+        // the text is set, with no need to be in the tree.
+        let ruler = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+        ruler.fontSize = size
+
+        func measure(_ candidate: String) -> CGFloat {
+            ruler.text = candidate
+            return ruler.frame.width
+        }
+
+        var lines: [String] = []
+
+        for paragraph in text.components(separatedBy: "\n\n") {
+            let words = paragraph.split(whereSeparator: \.isWhitespace).map(String.init)
+            guard !words.isEmpty else { continue }
+
+            var line = ""
+            for word in words {
+                let candidate = line.isEmpty ? word : line + " " + word
+                if line.isEmpty || measure(candidate) <= width {
+                    line = candidate
+                } else {
+                    lines.append(line)
+                    line = word
+                }
+            }
+            if !line.isEmpty { lines.append(line) }
+
+            // Blank line between paragraphs, which the caller renders as vertical space.
+            lines.append("")
+        }
+
+        // Trailing separator after the final paragraph is just dead space.
+        if lines.last == "" { lines.removeLast() }
+
+        return lines
+    }
+
     private func label(_ text: String, size: CGFloat, color: SKColor) -> SKLabelNode {
         let node = SKLabelNode(fontNamed: SettingsDropdown.fontName)
         node.text = text
@@ -112,9 +174,31 @@ final class AttributionsScene: SKScene {
         return node
     }
 
-    /// Builds every entry into `content`, then clips it to the panel with a crop node.
+    /// Sets up the clipped scrolling window, then fills it.
     private func buildList() {
-        let left = -Self.windowSize.width/2 + 20
+        let crop = SKCropNode()
+        let mask = SKSpriteNode(color: .black, size: Self.windowSize)
+        crop.maskNode = mask
+        crop.position = Self.windowOrigin
+        crop.zPosition = 40
+
+        // Content is positioned from the top of the window downwards.
+        content.position = CGPoint(x: 0, y: Self.windowSize.height/2 - 30)
+        crop.addChild(content)
+        addChild(crop)
+
+        layoutContent()
+    }
+
+    /// Lays out every entry into `content`. Re-run when a licence is folded or unfolded,
+    /// since that changes the height of everything below it.
+    private func layoutContent() {
+        content.removeAllChildren()
+        links.removeAll()
+        disclosures.removeAll()
+
+        let left = -Self.windowSize.width/2 + Self.textInset
+        let usableWidth = Self.windowSize.width - Self.textInset * 2
         var y: CGFloat = 0
 
         for (index, item) in Attributions.all.enumerated() {
@@ -150,7 +234,31 @@ final class AttributionsScene: SKScene {
                 y -= Self.lineSpacing
             }
 
-            if let licenceLink = item.licenceURL, let url = URL(string: licenceLink) {
+            if let licenceText = item.licenceText {
+                // A licence that ships its own text gets a fold rather than a link out: the
+                // bundled copy is the one that matters, so an external link would be a
+                // second row saying the same thing.
+                let expanded = expandedLicences.contains(item.title)
+                let node = label("\(item.licence) licence  \(expanded ? "-" : "+")",
+                                 size: Self.bodySize, color: Self.linkColor)
+                node.position = CGPoint(x: left, y: y)
+                content.addChild(node)
+                disclosures.append((range: (y - 14)...(y + 14), title: item.title))
+                y -= Self.lineSpacing
+
+                if expanded {
+                    y -= 6
+                    for line in wrap(licenceText, size: Self.bodySize, width: usableWidth) {
+                        // Blank entries are paragraph breaks — no node, just the gap.
+                        if !line.isEmpty {
+                            let node = label(line, size: Self.bodySize, color: Self.bodyColor)
+                            node.position = CGPoint(x: left, y: y)
+                            content.addChild(node)
+                        }
+                        y -= Self.licenceLineSpacing
+                    }
+                }
+            } else if let licenceLink = item.licenceURL, let url = URL(string: licenceLink) {
                 let node = label("\(item.licence) terms  >", size: Self.bodySize, color: Self.linkColor)
                 node.position = CGPoint(x: left, y: y)
                 content.addChild(node)
@@ -161,16 +269,9 @@ final class AttributionsScene: SKScene {
 
         contentHeight = -y
 
-        let crop = SKCropNode()
-        let mask = SKSpriteNode(color: .black, size: Self.windowSize)
-        crop.maskNode = mask
-        crop.position = Self.windowOrigin
-        crop.zPosition = 40
-
-        // Content is positioned from the top of the window downwards.
-        content.position = CGPoint(x: 0, y: Self.windowSize.height/2 - 30)
-        crop.addChild(content)
-        addChild(crop)
+        // Folding a licence shut can leave the view scrolled past the new, shorter end.
+        scrollY = min(scrollY, maxScroll)
+        content.position.y = Self.windowSize.height/2 - 30 + scrollY
     }
 
     /// How far the list can travel before its last line reaches the bottom of the window.
@@ -216,19 +317,29 @@ final class AttributionsScene: SKScene {
         // Only treat it as a tap if the finger barely moved, so scrolling past a link
         // doesn't open it.
         guard dragDistance <= Self.tapSlop else { return }
-        openLink(at: pos)
+        handleTap(at: pos)
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         homeButton.unpressed()
     }
 
-    private func openLink(at scenePoint: CGPoint) {
+    private func handleTap(at scenePoint: CGPoint) {
         // Scene point -> content-local, accounting for the crop node and the scroll offset.
         let localY = scenePoint.y - Self.windowOrigin.y - content.position.y
         let localX = scenePoint.x - Self.windowOrigin.x
 
         guard abs(localX) <= Self.windowSize.width/2 else { return }
+
+        for fold in disclosures where fold.range.contains(localY) {
+            if expandedLicences.contains(fold.title) {
+                expandedLicences.remove(fold.title)
+            } else {
+                expandedLicences.insert(fold.title)
+            }
+            layoutContent()
+            return
+        }
 
         for link in links where link.range.contains(localY) {
             UIApplication.shared.open(link.url)
