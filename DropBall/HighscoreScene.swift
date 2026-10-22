@@ -26,6 +26,15 @@ class HighscoreScene: SKScene {
 
     var scores = [Score]()
 
+    /// Opens the global leaderboard. Sits below the panel, which bottoms out at -500, and
+    /// stays clear of the shortest supported scene (half-height 667).
+    private let gameCenterLabel = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+    private static let gameCenterLabelY: CGFloat = -545
+
+    // Dark, for the same reason as the credits screen: this row sits on the sky rather than
+    // on the panel, and white comes out at under 2:1 against it.
+    private static let gameCenterColor = SKColor(red: 0.07, green: 0.14, blue: 0.32, alpha: 1.0)
+
     #if DEBUG
     private var debugOverlay: DebugOverlay?
 
@@ -38,6 +47,14 @@ class HighscoreScene: SKScene {
         scores = ScoreStore.top()
     }
     
+    /// Built in code rather than loaded from a .sks, so it's constructed directly.
+    func go_to_global_scores(){
+        let scene = GlobalScoresScene(size: CGSize(width: GameViewController.WIDTH,
+                                                   height: GameViewController.HEIGHT))
+        scene.scaleMode = .aspectFill
+        view?.presentScene(scene, transition: SKTransition.crossFade(withDuration: 0.5))
+    }
+
     func go_home(){
         Entity.cameraTranslationY = 0
 
@@ -133,9 +150,32 @@ class HighscoreScene: SKScene {
         addChild(cropNode)
         cropNode.zPosition = 40
 
+        setUpGameCenterLabel()
+
         #if DEBUG
         setUpDebugOverlay()
         #endif
+    }
+
+    private func setUpGameCenterLabel(){
+        gameCenterLabel.text = "GLOBAL SCORES  >"
+        gameCenterLabel.fontSize = 24
+        gameCenterLabel.fontColor = Self.gameCenterColor
+        gameCenterLabel.verticalAlignmentMode = .center
+        gameCenterLabel.position = CGPoint(x: 0, y: Self.gameCenterLabelY)
+        gameCenterLabel.zPosition = 20
+
+        // Sign-in finishes asynchronously, often after this scene is already on screen, so
+        // the row starts hidden and update() reveals it if and when it completes.
+        gameCenterLabel.alpha = 0
+
+        addChild(gameCenterLabel)
+    }
+
+    /// The label's own frame is only as tall as the lettering, which is a poor target for a
+    /// finger, so the tap region is padded out to a comfortable size.
+    private var gameCenterHitArea: CGRect {
+        gameCenterLabel.frame.insetBy(dx: -20, dy: -22)
     }
 
     /// The two lines shown in place of the list when nothing has been saved yet, positioned
@@ -215,6 +255,13 @@ class HighscoreScene: SKScene {
         }
         #endif
 
+        // Checked before the drag starts, and only while visible, so it can't be hit by a
+        // tap that lands there before sign-in has finished.
+        if gameCenterLabel.alpha > 0 && gameCenterHitArea.contains(pos) {
+            go_to_global_scores()
+            return
+        }
+
         homeButton.checkPressed(pos: pos)
 
         initialPosition = pos.y
@@ -252,6 +299,9 @@ class HighscoreScene: SKScene {
     }
     
     override func update(_ currentTime: TimeInterval) {
+        // Ahead of the early return below, so the row still appears on a fresh install.
+        gameCenterLabel.alpha = GameCenter.isAuthenticated ? 1 : 0
+
         if scores.count == 0{
             return
         }

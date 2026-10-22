@@ -427,6 +427,7 @@ class GameScene: SKScene {
     
     func save(){
         ScoreStore.record(score)
+        GameCenter.submit(score)
     }
     
     var gameLost = false

@@ -39,7 +39,12 @@ class GameViewController: UIViewController {
         super.viewDidLoad()
         
         AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
-        
+
+        // Started here rather than in the app delegate because signing in may need to put a
+        // view controller on screen, and this is the first point at which there's a root
+        // view controller for it to be presented from.
+        GameCenter.authenticate()
+
         if let view = self.view as? SKView {
             view.ignoresSiblingOrder = true
             view.shouldCullNonVisibleNodes = true
