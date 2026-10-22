@@ -1,16 +1,70 @@
 //
-//  GameScene.swift
+//  HighscoreScene.swift
 //  DropBall
 //
 //  Created by Jordan Horacsek on 2022-05-03.
 //
 
 import SpriteKit
-import GameplayKit
 
+/// The score screen, in two modes: this device's best runs, and the global Game Center
+/// leaderboard. One scene rather than two, so switching between them is an in-place swap
+/// instead of a scene transition.
+///
+/// Still loaded from HighscoreScene.sks, which holds no nodes of its own — it exists to carry
+/// the custom class and the centred anchor point that every .sks scene in the project uses.
 class HighscoreScene: SKScene {
     let HEIGHT : CGFloat = GameViewController.HEIGHT
     let WIDTH : CGFloat = GameViewController.WIDTH
+
+    // MARK: - Layout
+
+    /// The clip region for the list. Matches the panel art's dark interior exactly, which
+    /// runs from y 347 down to -448.
+    private static let windowSize = CGSize(width: 554, height: 794)
+    private static let windowOrigin = CGPoint(x: 6, y: -51)
+
+    /// Distance from the top of the window to the first row's baseline.
+    private static let listInset: CGFloat = 40
+
+    private static let rowSpacing: CGFloat = 48
+    private static let rowFontSize: CGFloat = 24
+
+    /// Column positions in window-local coordinates. Rank and score are right-aligned so
+    /// their digits line up, rather than "1" and "20" sharing a left edge.
+    private static let rankRightX: CGFloat = -215
+    private static let middleLeftX: CGFloat = -195
+    private static let scoreRightX: CGFloat = 261
+
+    /// Clear space kept between the longest score and the column beside it.
+    private static let columnGap: CGFloat = 24
+
+    private static let rowColor = SKColor(white: 1.0, alpha: 0.88)
+    private static let dimColor = SKColor(white: 1.0, alpha: 0.5)
+
+    /// The local player's own row in the global list. Matches the "on" green from the
+    /// settings dropdown so the palette stays consistent.
+    private static let highlightColor = SKColor(red: 0.42, green: 0.86, blue: 0.48, alpha: 1)
+
+    // The footers sit on the sky below the panel rather than on the panel itself, where
+    // white comes out at under 2:1. These are the credits screen's colours.
+    private static let footerColor = SKColor(red: 0.07, green: 0.14, blue: 0.32, alpha: 1.0)
+    private static let footerLinkColor = SKColor(red: 0.06, green: 0.27, blue: 0.62, alpha: 1.0)
+
+    /// The panel bottoms out at -500 and the shortest supported scene is half-height 667, so
+    /// there is only about 167 points of sky underneath. Two rows is what fits.
+    private static let toggleFooterY: CGFloat = -542
+    private static let rankFooterY: CGFloat = -596
+
+    /// Padding added around a footer label to make it a comfortable finger target.
+    ///
+    /// The vertical figure is capped by the 54-point gap between the two footers: a label is
+    /// 23 points tall, so anything over 15 makes the two targets overlap, and the toggle —
+    /// tested first — would swallow taps aimed at the top of the row below it. 14 still gives
+    /// a 51-point target, comfortably over the 44 Apple asks for.
+    private static let footerTouchPadding = CGSize(width: 20, height: 14)
+
+    // MARK: - Nodes
 
     let background = SKSpriteNode(imageNamed: "background")
     let scoreOverlay = SKSpriteNode(imageNamed: "scoreoverlay")
@@ -18,22 +72,65 @@ class HighscoreScene: SKScene {
 
     var homeButton = SKButton(x:0, y:100, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: {} )
 
-    /// Scroll speed in points per frame, carried over after the finger lifts.
-    var velocity : CGFloat = 0
+    private let content = SKNode()
+    private var contentHeight: CGFloat = 0
 
-    /// Total height of the score list, used to clamp how far it can be scrolled.
-    var offsetMax : CGFloat = 0
+    private let toggleFooter = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+    private let rankFooter = SKLabelNode(fontNamed: SettingsDropdown.fontName)
 
-    var scores = [Score]()
+    // MARK: - State
 
-    /// Opens the global leaderboard. Sits below the panel, which bottoms out at -500, and
-    /// stays clear of the shortest supported scene (half-height 667).
-    private let gameCenterLabel = SKLabelNode(fontNamed: SettingsDropdown.fontName)
-    private static let gameCenterLabelY: CGFloat = -545
+    enum Mode {
+        case local
+        case global
+    }
 
-    // Dark, for the same reason as the credits screen: this row sits on the sky rather than
-    // on the panel, and white comes out at under 2:1 against it.
-    private static let gameCenterColor = SKColor(red: 0.07, green: 0.14, blue: 0.32, alpha: 1.0)
+    private var mode: Mode = .local
+
+    /// The global list is fetched on first switch and then kept, so toggling back and forth
+    /// doesn't re-hit the network every time.
+    private enum GlobalState {
+        case notLoaded
+        case loading
+        case loaded(GameCenter.Standings)
+        case failed
+    }
+
+    private var globalState: GlobalState = .notLoaded
+
+    private var scores = [Score]()
+
+    /// A row of the list, in whichever mode. Both modes reduce to rank / middle / score, so
+    /// the layout below doesn't need to know which one it's drawing.
+    private struct Row {
+        let rank: Int
+        let middle: String
+        let score: Int
+        let highlighted: Bool
+    }
+
+    /// Local rows are dated rather than named. Scores saved before dates were recorded have
+    /// none, and show nothing rather than a placeholder date.
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    // MARK: - Scrolling
+
+    private var scrollY: CGFloat = 0
+    private var velocity: CGFloat = 0
+    private var isDragging = false
+    private var dragStartY: CGFloat = 0
+    private var dragStartScroll: CGFloat = 0
+    private var dragDistance: CGFloat = 0
+    private var previousTouchY: CGFloat = 0
+    private var currentTouchY: CGFloat = 0
+
+    /// Movement beyond this counts as a scroll rather than a tap.
+    private static let tapSlop: CGFloat = 12
 
     #if DEBUG
     private var debugOverlay: DebugOverlay?
@@ -42,18 +139,317 @@ class HighscoreScene: SKScene {
     /// to a stray tap, without putting an alert in the way.
     private var resetArmed = false
     #endif
-    
-    func getScores(){
+
+    // MARK: - Setup
+
+    override func didMove(to view: SKView) {
+        getScores()
+
+        background.anchorPoint = CGPoint(x:0.5,y:1.0)
+        background.position.y = GameViewController.HEIGHT/2
+        self.addChild(background)
+        background.zPosition = -1
+
+        // Over the gradient, under the mountains (-0.9).
+        addChild(BackgroundOverlay.make())
+        addChild(scoreOverlay)
+        scoreOverlay.zPosition = 10
+
+        addChild(mountains)
+        mountains.anchorPoint = CGPoint(x:0,y:0)
+        mountains.position.x = -WIDTH/2
+        mountains.position.y = -HEIGHT/2
+        mountains.zPosition = -0.9
+
+        homeButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: go_home )
+        homeButton.scale(scale: 0.65)
+
+        for child in homeButton.getSpriteNode(){
+            addChild(child)
+        }
+
+        setUpWindow()
+        setUpFooters()
+        layoutContent()
+
+        #if DEBUG
+        setUpDebugOverlay()
+        #endif
+    }
+
+    private func getScores(){
         scores = ScoreStore.top()
     }
-    
-    /// Built in code rather than loaded from a .sks, so it's constructed directly.
-    func go_to_global_scores(){
-        let scene = GlobalScoresScene(size: CGSize(width: GameViewController.WIDTH,
-                                                   height: GameViewController.HEIGHT))
-        scene.scaleMode = .aspectFill
-        view?.presentScene(scene, transition: SKTransition.crossFade(withDuration: 0.5))
+
+    private func setUpWindow() {
+        let crop = SKCropNode()
+        crop.maskNode = SKSpriteNode(color: .black, size: Self.windowSize)
+        crop.position = Self.windowOrigin
+        crop.zPosition = 40
+
+        content.position = CGPoint(x: 0, y: listTopY)
+        crop.addChild(content)
+        addChild(crop)
     }
+
+    private func setUpFooters() {
+        for (node, y, color) in [(toggleFooter, Self.toggleFooterY, Self.footerColor),
+                                 (rankFooter, Self.rankFooterY, Self.footerLinkColor)] {
+            node.fontSize = 24
+            node.fontColor = color
+            node.verticalAlignmentMode = .center
+            node.horizontalAlignmentMode = .center
+            node.position = CGPoint(x: 0, y: y)
+            node.zPosition = 20
+            node.alpha = 0
+            addChild(node)
+        }
+    }
+
+    // MARK: - Mode
+
+    private func setMode(_ newMode: Mode) {
+        guard newMode != mode else { return }
+
+        mode = newMode
+
+        // The two lists are different lengths, so carrying the offset over would leave the
+        // shorter one scrolled past its end.
+        scrollY = 0
+        velocity = 0
+
+        if case .notLoaded = globalState, mode == .global {
+            loadGlobalScores()
+        } else {
+            layoutContent()
+        }
+    }
+
+    private func loadGlobalScores() {
+        globalState = .loading
+        layoutContent()
+
+        Task { @MainActor in
+            do {
+                globalState = .loaded(try await GameCenter.loadTopScores())
+            } catch {
+                print("Game Center leaderboard load failed: \(error.localizedDescription)")
+                globalState = .failed
+            }
+
+            // The player may have switched back to the local list while this was in flight.
+            if mode == .global {
+                layoutContent()
+            }
+        }
+    }
+
+    // MARK: - Layout
+
+    private var listTopY: CGFloat {
+        Self.windowSize.height/2 - Self.listInset
+    }
+
+    private func label(_ text: String, size: CGFloat, color: SKColor) -> SKLabelNode {
+        let node = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+        node.text = text
+        node.fontSize = size
+        node.fontColor = color
+        node.verticalAlignmentMode = .center
+        node.horizontalAlignmentMode = .left
+        return node
+    }
+
+    /// Rebuilds the list for the current mode and state. Cheap enough to run wholesale —
+    /// it's twenty rows, and it only runs on a mode switch or a completed load.
+    private func layoutContent() {
+        content.removeAllChildren()
+
+        switch mode {
+        case .local:
+            if scores.isEmpty {
+                // On a fresh install the panel is otherwise a blank grey rectangle, which
+                // reads as a loading failure rather than "you haven't played yet".
+                centredMessage("NO SCORES YET", detail: "Play a round to set one")
+            } else {
+                layoutRows(localRows())
+            }
+
+        case .global:
+            switch globalState {
+            case .notLoaded, .loading:
+                centredMessage("LOADING...", detail: nil)
+            case .failed:
+                centredMessage("COULDN'T LOAD SCORES", detail: "Tap to try again")
+            case .loaded(let standings) where standings.entries.isEmpty:
+                centredMessage("NO SCORES YET", detail: "Be the first")
+            case .loaded(let standings):
+                layoutRows(globalRows(standings))
+            }
+        }
+
+        updateFooters()
+    }
+
+    private func localRows() -> [Row] {
+        scores.enumerated().map { index, score in
+            Row(rank: index + 1,
+                middle: score.date.map { Self.dateFormatter.string(from: $0) } ?? "",
+                score: Int(score.score),
+                highlighted: false)
+        }
+    }
+
+    private func globalRows(_ standings: GameCenter.Standings) -> [Row] {
+        standings.entries.map { entry in
+            Row(rank: entry.rank,
+                middle: entry.name,
+                score: entry.score,
+                highlighted: entry.isLocalPlayer)
+        }
+    }
+
+    private func centredMessage(_ text: String, detail: String?) {
+        contentHeight = 0
+
+        // A message can replace a list that was left scrolled. The centring below assumes an
+        // unscrolled content node, so this has to go back to the top or it lands off-panel.
+        scrollY = 0
+        velocity = 0
+        content.position.y = listTopY
+
+        let centreY = -Self.windowSize.height/2 + Self.listInset
+
+        let headline = label(text, size: 32, color: Self.rowColor)
+        headline.horizontalAlignmentMode = .center
+        headline.position = CGPoint(x: 0, y: centreY + (detail == nil ? 0 : 20))
+        content.addChild(headline)
+
+        if let detail {
+            let node = label(detail, size: 16, color: Self.dimColor)
+            node.horizontalAlignmentMode = .center
+            node.position = CGPoint(x: 0, y: centreY - 20)
+            content.addChild(node)
+        }
+    }
+
+    private func layoutRows(_ rows: [Row]) {
+        var y: CGFloat = 0
+
+        // The middle column gets whatever the score column doesn't need. Measured from the
+        // real scores rather than assumed: the score column is right-aligned, so a five-digit
+        // score reaches 45 points further left than a three-digit one, and a fixed budget
+        // that looks fine at "142" collides at "99999".
+        let middleMaxWidth = Self.scoreRightX
+            - widestScoreWidth(rows)
+            - Self.columnGap
+            - Self.middleLeftX
+
+        for (index, row) in rows.enumerated() {
+            // Advanced before each row but the first, so `contentHeight` ends up as the
+            // distance to the *last* row rather than including a trailing gap below it —
+            // which would otherwise let the list scroll one empty row too far.
+            if index > 0 { y -= Self.rowSpacing }
+
+            let color = row.highlighted ? Self.highlightColor : Self.rowColor
+
+            let rank = label("\(row.rank)", size: Self.rowFontSize, color: color)
+            rank.horizontalAlignmentMode = .right
+            rank.position = CGPoint(x: Self.rankRightX, y: y)
+            content.addChild(rank)
+
+            if !row.middle.isEmpty {
+                let middle = label(truncate(row.middle, to: middleMaxWidth, size: Self.rowFontSize),
+                                   size: Self.rowFontSize,
+                                   color: row.highlighted ? color : Self.dimColor)
+                middle.position = CGPoint(x: Self.middleLeftX, y: y)
+                content.addChild(middle)
+            }
+
+            let score = label("\(row.score)", size: Self.rowFontSize, color: color)
+            score.horizontalAlignmentMode = .right
+            score.position = CGPoint(x: Self.scoreRightX, y: y)
+            content.addChild(score)
+        }
+
+        contentHeight = -y
+
+        // A reload can land while scrolled past the new, possibly shorter, end.
+        scrollY = min(scrollY, maxScroll)
+        content.position.y = listTopY + scrollY
+    }
+
+    /// Width of the longest score in the list, as drawn.
+    private func widestScoreWidth(_ rows: [Row]) -> CGFloat {
+        let ruler = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+        ruler.fontSize = Self.rowFontSize
+
+        return rows.reduce(0) { widest, row in
+            ruler.text = "\(row.score)"
+            return max(widest, ruler.frame.width)
+        }
+    }
+
+    /// Clips text to `width`, ending it with an ellipsis.
+    ///
+    /// Game Center display names are arbitrary and can be far wider than the column.
+    /// Measured with the real font rather than cut at a character count, because Pixel
+    /// Operator is proportional — an "I" is a third the width of a "W".
+    private func truncate(_ text: String, to width: CGFloat, size: CGFloat) -> String {
+        let ruler = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+        ruler.fontSize = size
+
+        func fits(_ candidate: String) -> Bool {
+            ruler.text = candidate
+            return ruler.frame.width <= width
+        }
+
+        guard !fits(text) else { return text }
+
+        var trimmed = text
+        while !trimmed.isEmpty {
+            trimmed.removeLast()
+            if fits(trimmed + "...") { return trimmed + "..." }
+        }
+
+        return "..."
+    }
+
+    private func updateFooters() {
+        switch mode {
+        case .local:
+            // Hidden until sign-in completes, which happens asynchronously and often after
+            // this scene is already on screen. update() reveals it when it lands.
+            toggleFooter.text = "GLOBAL SCORES  >"
+            toggleFooter.alpha = GameCenter.isAuthenticated ? 1 : 0
+            rankFooter.alpha = 0
+
+        case .global:
+            toggleFooter.text = "<  LOCAL SCORES"
+            toggleFooter.alpha = 1
+
+            // Doubles as the way into the system leaderboard, because there is only room for
+            // two rows under the panel and the player's standing is worth stating outright —
+            // especially outside the top twenty, where the list above doesn't show it.
+            if case .loaded(let standings) = globalState {
+                if let rank = standings.localRank {
+                    rankFooter.text = "RANK \(rank) OF \(standings.totalPlayers)  >"
+                } else {
+                    rankFooter.text = "NOT RANKED YET  >"
+                }
+                rankFooter.alpha = 1
+            } else {
+                rankFooter.alpha = 0
+            }
+        }
+    }
+
+    /// How far the list can travel before its last row reaches the bottom of the window.
+    private var maxScroll: CGFloat {
+        max(0, contentHeight - Self.windowSize.height + Self.listInset * 2)
+    }
+
+    // MARK: - Navigation
 
     func go_home(){
         Entity.cameraTranslationY = 0
@@ -64,142 +460,6 @@ class HighscoreScene: SKScene {
             let reveal = SKTransition.crossFade(withDuration: 0.5)
             self.view?.presentScene(scene, transition: reveal)
         }
-    }
-    
-    var holder : [ScoreDisplay] = []
-    var indexHolder : [ScoreDisplay] = []
-    var lineHolder : [SKShapeNode] = []
-    override func didMove(to view: SKView) {
-        getScores()
-        background.anchorPoint = CGPoint(x:0.5,y:1.0)
-        background.position.y = GameViewController.HEIGHT/2
-        self.addChild(background)
-        background.zPosition = -1
-
-        // Over the gradient, under the mountains (-0.9).
-        addChild(BackgroundOverlay.make())
-        addChild(scoreOverlay)
-        scoreOverlay.zPosition = 10
-        
-        addChild(mountains)
-        mountains.anchorPoint = CGPoint(x:0,y:0)
-        mountains.position.x = -WIDTH/2
-        mountains.position.y = -HEIGHT/2
-        mountains.zPosition = -0.9
-        
-        homeButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: go_home )
-        homeButton.scale(scale: 0.65)
-        
-        for child in homeButton.getSpriteNode(){
-            addChild(child)
-        }
-        
-        // The score rows live inside a crop node so they clip to the overlay panel as they scroll.
-        var offset:CGFloat = 0
-        let mask = SKSpriteNode(color: SKColor.black, size: CGSize(width: 554, height: 794))
-        let cropNode = SKCropNode()
-
-        let initial:CGFloat = 330
-        for (index, s) in scores.enumerated() {
-            let scoreNum = ScoreDisplay(posX:-150, posY:initial+offset)
-            scoreNum.setScore(score: index+1)
-            for c in scoreNum.getSpriteNode(){
-                cropNode.addChild(c)
-                c.zPosition = 50
-            }
-            scoreNum.update()
-            indexHolder.append(scoreNum)
-            let score = ScoreDisplay(posX:0, posY:initial+offset)
-            score.setScore(score: Int(s.score))
-            for c in score.getSpriteNode(){
-                cropNode.addChild(c)
-                c.zPosition = 50
-            }
-            score.update()
-            holder.append(score)
-            offset-=100
-            
-            let divider = SKShapeNode()
-            let path = UIBezierPath()
-            path.move(to:CGPoint(x:-500, y:0))
-            path.addLine(to:CGPoint(x:500,y:0))
-            
-            divider.path = path.cgPath
-            divider.lineWidth = 4
-            divider.strokeColor = .darkGray
-            
-            divider.zPosition = 51
-            
-            divider.position.y = initial+50+offset
-
-            cropNode.addChild(divider)
-            lineHolder.append(divider)
-        }
-        offsetMax = offset
-
-        // On a fresh install the panel is otherwise a blank grey rectangle, which reads as
-        // a loading failure rather than "you haven't played yet".
-        if scores.isEmpty {
-            for node in emptyStateLabels() {
-                cropNode.addChild(node)
-            }
-        }
-
-        cropNode.position = CGPoint(x:6, y:-51)
-        cropNode.maskNode = mask
-        addChild(cropNode)
-        cropNode.zPosition = 40
-
-        setUpGameCenterLabel()
-
-        #if DEBUG
-        setUpDebugOverlay()
-        #endif
-    }
-
-    private func setUpGameCenterLabel(){
-        gameCenterLabel.text = "GLOBAL SCORES  >"
-        gameCenterLabel.fontSize = 24
-        gameCenterLabel.fontColor = Self.gameCenterColor
-        gameCenterLabel.verticalAlignmentMode = .center
-        gameCenterLabel.position = CGPoint(x: 0, y: Self.gameCenterLabelY)
-        gameCenterLabel.zPosition = 20
-
-        // Sign-in finishes asynchronously, often after this scene is already on screen, so
-        // the row starts hidden and update() reveals it if and when it completes.
-        gameCenterLabel.alpha = 0
-
-        addChild(gameCenterLabel)
-    }
-
-    /// The label's own frame is only as tall as the lettering, which is a poor target for a
-    /// finger, so the tap region is padded out to a comfortable size.
-    private var gameCenterHitArea: CGRect {
-        gameCenterLabel.frame.insetBy(dx: -20, dy: -22)
-    }
-
-    /// The two lines shown in place of the list when nothing has been saved yet, positioned
-    /// in the crop node's own coordinates so (0,0) is the middle of the visible panel.
-    private func emptyStateLabels() -> [SKLabelNode] {
-        let headline = SKLabelNode(fontNamed: SettingsDropdown.fontName)
-        headline.text = "NO SCORES YET"
-        headline.fontSize = 32
-        headline.fontColor = SKColor(white: 1.0, alpha: 0.92)
-        headline.verticalAlignmentMode = .center
-        headline.position = CGPoint(x: 0, y: 20)
-
-        let subline = SKLabelNode(fontNamed: SettingsDropdown.fontName)
-        subline.text = "Play a round to set one"
-        subline.fontSize = 16
-        subline.fontColor = SKColor(white: 1.0, alpha: 0.55)
-        subline.verticalAlignmentMode = .center
-        subline.position = CGPoint(x: 0, y: -20)
-
-        for label in [headline, subline] {
-            label.zPosition = 50
-        }
-
-        return [headline, subline]
     }
 
     #if DEBUG
@@ -221,30 +481,19 @@ class HighscoreScene: SKScene {
         debugOverlay = overlay
     }
 
-    /// Deletes every saved score, then rebuilds the screen so the change is visible.
+    /// Deletes every saved score, then rebuilds the local list.
     private func resetScores(){
         ScoreStore.removeAll()
-        reloadScene()
-    }
+        getScores()
+        resetArmed = false
 
-    /// Re-presents the scene from scratch. The list, its crop node and the scroll state are
-    /// all built once in didMove, so rebuilding is simpler and safer than unpicking them.
-    private func reloadScene(){
-        guard let view = self.view else { return }
-        guard let scene = SKScene(fileNamed: "HighscoreScene") else { return }
-
-        scene.size = CGSize(width: GameViewController.WIDTH, height: GameViewController.HEIGHT)
-        scene.scaleMode = .aspectFill
-        view.presentScene(scene)
+        scrollY = 0
+        velocity = 0
+        layoutContent()
     }
     #endif
 
-    var isTouched=false
-    var initialPosition:CGFloat = 0
-    var difference:CGFloat = 0
-    var deaccelerate = false
-    var prevY : CGFloat = 0
-    var curY : CGFloat = 0
+    // MARK: - Input
 
     func touchDown(atPoint pos : CGPoint) {
         // Checked first, and returns, so tapping a debug button doesn't also start a drag
@@ -255,134 +504,121 @@ class HighscoreScene: SKScene {
         }
         #endif
 
-        // Checked before the drag starts, and only while visible, so it can't be hit by a
-        // tap that lands there before sign-in has finished.
-        if gameCenterLabel.alpha > 0 && gameCenterHitArea.contains(pos) {
-            go_to_global_scores()
+        // Footers are checked before the drag starts, and only while visible, so a tap
+        // landing there before sign-in has finished can't trigger anything.
+        if hits(toggleFooter, pos) || hits(rankFooter, pos) {
             return
         }
 
         homeButton.checkPressed(pos: pos)
 
-        initialPosition = pos.y
-        isTouched=true
-        deaccelerate = false
-        prevY = pos.y
-        curY = pos.y
+        isDragging = true
+        dragStartY = pos.y
+        dragStartScroll = scrollY
+        dragDistance = 0
+        velocity = 0
+        previousTouchY = pos.y
+        currentTouchY = pos.y
     }
 
     func touchMoved(toPoint pos : CGPoint) {
-        prevY = curY
-        curY = pos.y
+        guard isDragging else { return }
+
+        previousTouchY = currentTouchY
+        currentTouchY = pos.y
 
         // Velocity is the last frame's finger movement, which becomes the fling speed on lift.
-        velocity = curY - prevY
-        difference = (pos.y - initialPosition)
+        velocity = currentTouchY - previousTouchY
+
+        let delta = pos.y - dragStartY
+        dragDistance = max(dragDistance, abs(delta))
+
+        scrollY = min(max(dragStartScroll + delta, 0), maxScroll)
+        content.position.y = listTopY + scrollY
     }
 
     func touchUp(atPoint pos : CGPoint) {
-        curY = pos.y
-        difference=0
         homeButton.unpressed()
 
-        // Bake the dragged position in as the new resting position before coasting starts.
-        for i in holder{
-            i.initPosY = i.posY
-            i.update()
-        }
-        for i in indexHolder{
-            i.initPosY = i.posY
-            i.update()
-        }
-        isTouched=false
-        deaccelerate = true
-    }
-    
-    override func update(_ currentTime: TimeInterval) {
-        // Ahead of the early return below, so the row still appears on a fresh install.
-        gameCenterLabel.alpha = GameCenter.isAuthenticated ? 1 : 0
+        let wasDragging = isDragging
+        isDragging = false
 
-        if scores.count == 0{
+        guard wasDragging, dragDistance <= Self.tapSlop else { return }
+
+        // A tap rather than a scroll, so nothing should coast afterwards.
+        velocity = 0
+        handleTap(at: pos)
+    }
+
+    /// Whether a touch landed on a visible footer, acting on it if so.
+    @discardableResult
+    private func hits(_ footer: SKLabelNode, _ pos: CGPoint) -> Bool {
+        guard footer.alpha > 0 else { return false }
+
+        let target = footer.frame.insetBy(dx: -Self.footerTouchPadding.width,
+                                          dy: -Self.footerTouchPadding.height)
+        guard target.contains(pos) else { return false }
+
+        if footer === toggleFooter {
+            setMode(mode == .local ? .global : .local)
+        } else {
+            GameCenter.presentLeaderboard()
+        }
+
+        return true
+    }
+
+    private func handleTap(at pos: CGPoint) {
+        // Retry by tapping the panel, which is where the failure message is.
+        if mode == .global, case .failed = globalState, scoreOverlay.frame.contains(pos) {
+            loadGlobalScores()
+        }
+    }
+
+    override func update(_ currentTime: TimeInterval) {
+        // Ahead of everything else, so the row appears on a fresh install too.
+        if mode == .local {
+            toggleFooter.alpha = GameCenter.isAuthenticated ? 1 : 0
+        }
+
+        coast()
+    }
+
+    /// Carries the list on after the finger lifts, shedding speed until it stops.
+    private func coast() {
+        guard !isDragging, velocity != 0 else { return }
+
+        let decay: CGFloat = 0.75
+
+        if abs(velocity) < decay {
+            velocity = 0
             return
         }
 
-        let d:CGFloat = 2
-        if(deaccelerate){
-            if(velocity < 1.5/d && velocity > -1.5/d){
-                velocity = 0
-                deaccelerate = false
-            }
-            if(velocity > 0){
-                velocity-=1.5/d
-            }
-            if(velocity < 0){
-                velocity+=1.5/d
-            }
-            let initial:CGFloat = 330
-            var offset:CGFloat = 0
-            
-            for (index, i) in holder.enumerated() {
-                i.posY = i.posY + velocity
-                if(i.posY >= -offsetMax-420 + offset){
-                    i.posY = -offsetMax-420 + offset
-                }
-                if(i.posY <= initial + offset){
-                    i.posY = initial + offset
-                }
-                lineHolder[index].position.y = i.posY - 50
-                i.initPosY = i.posY
-                offset-=100
-            }
-            offset = 0
-            for i in indexHolder{
-                i.posY = i.posY + velocity
+        velocity -= decay * (velocity > 0 ? 1 : -1)
 
-                if(i.posY >= -offsetMax-420 + offset){
-                    i.posY = -offsetMax-420 + offset
-                }
-                if(i.posY <= initial + offset){
-                    i.posY = initial + offset
-                }
-                i.initPosY = i.posY
-                offset-=100
-            }
-        }
+        let next = min(max(scrollY + velocity, 0), maxScroll)
 
+        // Hitting either end kills the fling rather than letting it grind there.
+        if next == scrollY { velocity = 0 }
 
-        if(isTouched){
-            for (index, i) in holder.enumerated() {
-                i.posY = i.initPosY + difference
-                lineHolder[index].position.y = i.posY - 50
-            }
-            for i in indexHolder{
-                i.posY = i.initPosY + difference
-            }
-        }
-        for i in holder{
-            i.update()
-        }
-        for i in indexHolder{
-            i.update()
-        }
+        scrollY = next
+        content.position.y = listTopY + scrollY
     }
-    
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
 
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches { self.touchDown(atPoint: t.location(in: self)) }
     }
-    
+
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
     }
-    
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches { self.touchUp(atPoint: t.location(in: self)) }
     }
-    
+
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches { self.touchUp(atPoint: t.location(in: self)) }
     }
-    
-   
 }
