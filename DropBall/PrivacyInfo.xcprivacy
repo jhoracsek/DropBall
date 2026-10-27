@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The game has no analytics, no ad frameworks, no third-party SDKs, and makes no
+	     network requests of its own. Game Center traffic is handled by Apple's framework,
+	     not collected by this app. These three keys must stay consistent with the answers
+	     given in App Store Connect's App Privacy questionnaire. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- Settings toggles (SoundOff, RumbleOff, MusicOff) and the score held for
+			     submission when Game Center sign-in hasn't finished yet. All of it is
+			     written and read only by this app: nothing reads another app's values or
+			     the system's, and there is no App Group. That is reason CA92.1. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

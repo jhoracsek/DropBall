@@ -13,6 +13,7 @@
 		1767313F3087C7AB00C18A54 /* BallTrail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1767313E3087C7AB00C18A54 /* BallTrail.swift */; };
 		176731423088468100C18A54 /* BackgroundOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176731413088468100C18A54 /* BackgroundOverlay.swift */; };
 		179FD3F130892F26008B99A2 /* ScoreStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 179FD3F030892F26008B99A2 /* ScoreStore.swift */; };
+		179FD3F630892F26008B99A2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 179FD3F730892F26008B99A2 /* PrivacyInfo.xcprivacy */; };
 		179FD3F230892F26008B99A2 /* GameCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 179FD3F330892F26008B99A2 /* GameCenter.swift */; };
 		17AA134A307D635600866DC1 /* SettingsDropdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17AA1349307D635600866DC1 /* SettingsDropdown.swift */; };
 		17AA134C307DAAF200866DC1 /* PixelOperator8.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */; };
@@ -85,6 +86,7 @@
 		1767313E3087C7AB00C18A54 /* BallTrail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BallTrail.swift; sourceTree = "<group>"; };
 		176731413088468100C18A54 /* BackgroundOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundOverlay.swift; sourceTree = "<group>"; };
 		179FD3F030892F26008B99A2 /* ScoreStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreStore.swift; sourceTree = "<group>"; };
+		179FD3F730892F26008B99A2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		179FD3F230898E43008B99A2 /* DropBall.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DropBall.entitlements; sourceTree = "<group>"; };
 		179FD3F330892F26008B99A2 /* GameCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenter.swift; sourceTree = "<group>"; };
 		17AA1349307D635600866DC1 /* SettingsDropdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsDropdown.swift; sourceTree = "<group>"; };
@@ -255,6 +257,7 @@
 				1767313E3087C7AB00C18A54 /* BallTrail.swift */,
 				176731413088468100C18A54 /* BackgroundOverlay.swift */,
 				179FD3F030892F26008B99A2 /* ScoreStore.swift */,
+				179FD3F730892F26008B99A2 /* PrivacyInfo.xcprivacy */,
 				179FD3F330892F26008B99A2 /* GameCenter.swift */,
 			);
 			path = DropBall;
@@ -386,6 +389,7 @@
 				E2BF96B22821C65E000A2B9C /* GameScene.sks in Resources */,
 				17E688783085BF3300BDF09D /* music_your_tomorrow.m4a in Resources */,
 				E2BF96BD2821C65F000A2B9C /* Assets.xcassets in Resources */,
+				179FD3F630892F26008B99A2 /* PrivacyInfo.xcprivacy in Resources */,
 				E25A0B672ECB93DA0085E61E /* Particle.sks in Resources */,
 				17E6887E3085BF4100BDF09D /* music_first_memories.m4a in Resources */,
 				E22952A128BC09BD00218A5C /* StartScene.sks in Resources */,
