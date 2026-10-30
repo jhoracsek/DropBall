@@ -17,6 +17,8 @@ class ScoreDisplay {
     //var width : CGFloat
     
     var sprites : [SKSpriteNode]
+    // Up to three digit nodes, created once and reused; `sprites` holds the ones currently shown.
+    private var digitNodes : [SKSpriteNode] = []
     static var cameraTranslationX : CGFloat = 0
     static var cameraTranslationY : CGFloat = 0
 
@@ -32,7 +34,6 @@ class ScoreDisplay {
         self.posY = posY
         self.initPosY = posY
         self.sprites = [];
-        self.sprites.append(SKSpriteNode(imageNamed: "0"))
         self.factor = factor
         //self.height = sprite.size.height
         //self.width = sprite.size.width
@@ -40,7 +41,12 @@ class ScoreDisplay {
         var scaling = CGSize()
         scaling.width = 64*factor
         scaling.height = 64*factor
-        sprites[0].size = scaling
+        for _ in 0..<3 {
+            let node = SKSpriteNode(texture: TextureCache.texture(named: "0"))
+            node.size = scaling
+            digitNodes.append(node)
+        }
+        self.sprites.append(digitNodes[0])
     }
     
     func addScore(){
@@ -61,34 +67,28 @@ class ScoreDisplay {
             x in 100-999     -> x/10 in 10-99
          */
         
-        sprites.removeAll()
         let switchNum: Int = score/10
-        var scaling = CGSize()
-        scaling.width = 64*factor
-        scaling.height = 64*factor
+        let digits: [Int]
         
         if(switchNum == 0){
-            sprites.append(SKSpriteNode(imageNamed: String(score)))
-            sprites[0].size = scaling
-            
+            digits = [score]
         }else if (switchNum <= 9){
-            let firstDigit:Int = score/10
-            let secondDigit:Int = score%10
-            sprites.append(SKSpriteNode(imageNamed: String(firstDigit)))
-            sprites.append(SKSpriteNode(imageNamed: String(secondDigit)))
-            sprites[0].size = scaling
-            sprites[1].size = scaling
-            
+            digits = [score/10, score%10]
         }else{
-            let firstDigit:Int = score/100
-            let secondDigit:Int = (score/10)%10
-            let thirdDigit:Int = score%10
-            sprites.append(SKSpriteNode(imageNamed: String(firstDigit)))
-            sprites.append(SKSpriteNode(imageNamed: String(secondDigit)))
-            sprites.append(SKSpriteNode(imageNamed: String(thirdDigit)))
-            sprites[0].size = scaling
-            sprites[1].size = scaling
-            sprites[2].size = scaling
+            digits = [score/100, (score/10)%10, score%10]
+        }
+        
+        // Callers remove the old sprites and add the new ones; detaching here too
+        // guarantees a reused node never gets added to a scene twice.
+        for node in digitNodes {
+            node.removeFromParent()
+        }
+        
+        sprites.removeAll()
+        for (index, digit) in digits.enumerated() {
+            let node = digitNodes[index]
+            node.texture = TextureCache.texture(named: String(digit))
+            sprites.append(node)
         }
         
     }

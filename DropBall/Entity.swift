@@ -53,7 +53,7 @@ class Entity {
         self.posY = posY
         
         self.truePosY = posY
-        self.sprite = SKSpriteNode(imageNamed: imageNamed)
+        self.sprite = SKSpriteNode(texture: TextureCache.texture(named: imageNamed))
         
         self.sprite.position.x=posX
         self.sprite.position.y=posY
@@ -99,7 +99,7 @@ class Entity {
         hasSecondarySprite = true
         
         
-        secondarySprite = SKSpriteNode(imageNamed: spriteName ?? "ball")
+        secondarySprite = SKSpriteNode(texture: TextureCache.texture(named: spriteName ?? "ball"))
         
         secondarySprite?.position.x = posX + 10
         secondarySprite?.position.y = posY

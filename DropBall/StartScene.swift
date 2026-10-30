@@ -206,7 +206,17 @@ class StartScene: SKScene {
         for t in touches { self.touchUp(atPoint: t.location(in: self)) }
     }
     
+    private var timestep = FixedTimestep()
+    
     override func update(_ currentTime: TimeInterval) {
+        // Same fixed 1/60 s stepping as GameScene, so the menu animation stays smooth too.
+        for _ in 0..<timestep.steps(at: currentTime) {
+            stepScene()
+        }
+    }
+    
+    /// One 1/60 s tick of the start screen animation.
+    private func stepScene() {
         Entity.cameraTranslationY = 0
         Entity.cameraTranslationX = 0
         ball.update()

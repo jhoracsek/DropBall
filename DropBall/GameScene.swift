@@ -32,10 +32,10 @@ class GameScene: SKScene {
     let ball = Entity(posX:0, posY:0, imageNamed:"ball", falls:true)
     
     let top = Top(posY:500)
-    let background = SKSpriteNode(imageNamed: "background")
-    let pauseText = SKSpriteNode(imageNamed: "pausetext")
-    let mountains = SKSpriteNode(imageNamed: "mountains")
-    let overlay = SKSpriteNode(imageNamed: "loseoverlay")
+    let background = SKSpriteNode(texture: TextureCache.texture(named: "background"))
+    let pauseText = SKSpriteNode(texture: TextureCache.texture(named: "pausetext"))
+    let mountains = SKSpriteNode(texture: TextureCache.texture(named: "mountains"))
+    let overlay = SKSpriteNode(texture: TextureCache.texture(named: "loseoverlay"))
     let HEIGHT : CGFloat = GameViewController.HEIGHT
     let WIDTH : CGFloat = GameViewController.WIDTH
 
@@ -104,12 +104,14 @@ class GameScene: SKScene {
         mountains.zPosition = -0.9
         
         
+        // Button closures capture self weakly: the scene owns the buttons, so a strong
+        // capture would keep every finished GameScene alive forever.
         pauseButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"pause", click:"pause", test_function:
-                                { self.pauseButton.toggleDisable(); self.gamePaused = true;self.resumeButton.toggleDisable();} )
+                                { [weak self] in guard let self = self else { return }; self.pauseButton.toggleDisable(); self.gamePaused = true;self.resumeButton.toggleDisable();} )
         pauseButton.scale(scale: 0.65)
         
         resumeButton = SKButton(x:WIDTH/2-75, y:HEIGHT/2-75, unclick:"resume", click:"resume", test_function:
-                                    { if(self.pauseCooldown == 0 ){self.pauseButton.toggleDisable(); self.resumeButton.toggleDisable();self.gamePaused = false; self.pauseCooldown=5}}  )
+                                    { [weak self] in guard let self = self else { return }; if(self.pauseCooldown == 0 ){self.pauseButton.toggleDisable(); self.resumeButton.toggleDisable();self.gamePaused = false; self.pauseCooldown=5}}  )
         resumeButton.scale(scale: 0.65)
         
         for i in pauseButton.getSpriteNode(){
@@ -122,8 +124,8 @@ class GameScene: SKScene {
         
         resumeButton.toggleDisable()
     
-        startButton = SKButton(x:-125, y:-175, unclick:"play", click:"playclick", test_function: reset )
-        homeButton = SKButton(x:125, y:-175, unclick:"homebutton", click:"homebutton", test_function: go_home )
+        startButton = SKButton(x:-125, y:-175, unclick:"play", click:"playclick", test_function: { [weak self] in self?.reset() } )
+        homeButton = SKButton(x:125, y:-175, unclick:"homebutton", click:"homebutton", test_function: { [weak self] in self?.go_home() } )
         
         switch sceneNum{
         case 0:
@@ -524,7 +526,18 @@ class GameScene: SKScene {
         
     }
     
+    private var timestep = FixedTimestep()
+    
     override func update(_ currentTime: TimeInterval) {
+        // Run the 60 fps game logic once per elapsed 1/60 s, so a skipped frame is caught up
+        // instead of making everything pause for a frame.
+        for _ in 0..<timestep.steps(at: currentTime) {
+            stepGame()
+        }
+    }
+    
+    /// One 1/60 s tick of game logic.
+    private func stepGame() {
         /*
          For Testing
          */

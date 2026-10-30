@@ -263,10 +263,12 @@ class HighscoreScene: SKScene {
             let initial:CGFloat = 330
             return
         }*/
+        /*
         print("Offset max:")
         print(offsetMax)
         print(holder[0].posY)
         print("Done")
+         */
         let d:CGFloat = 2
         if(deaccelerate){
         

@@ -30,8 +30,8 @@ class SKButton {
         self.x = x
         self.y = y
         
-        self.unclickedSprite = SKSpriteNode(imageNamed: unclick)
-        self.clickedSprite = SKSpriteNode(imageNamed: click)
+        self.unclickedSprite = SKSpriteNode(texture: TextureCache.texture(named: unclick))
+        self.clickedSprite = SKSpriteNode(texture: TextureCache.texture(named: click))
         
         self.unclickedSprite.position.x = x
         self.unclickedSprite.position.y = y

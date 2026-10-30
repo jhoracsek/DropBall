@@ -33,6 +33,9 @@ class GameViewController: UIViewController {
         
         AppDelegate.sharedAppDelegate.coreDataStack.saveContext()
         
+        // Load game textures up front so gameplay never stalls on a first-time image load.
+        TextureCache.preloadGameTextures()
+        
         if let view = self.view as! SKView? {
             // Load the SKScene from 'GameScene.sks'
             //print(mod(-50,500))
@@ -58,8 +61,9 @@ class GameViewController: UIViewController {
             
             view.ignoresSiblingOrder = true
             
-            view.showsFPS = true
-            view.showsNodeCount = true
+            // The stats overlay was ~38% of main-thread time in Instruments; turn on only when needed.
+            view.showsFPS = false
+            view.showsNodeCount = false
         }
         
     }
