@@ -19,13 +19,28 @@ class HighscoreScene: SKScene {
 
     // MARK: - Layout
 
-    /// The clip region for the list. Matches the panel art's dark interior exactly, which
-    /// runs from y 347 down to -448.
-    private static let windowSize = CGSize(width: 554, height: 794)
-    private static let windowOrigin = CGPoint(x: 6, y: -51)
+    /// The panel art's dark interior, which runs from y 347 down to -448.
+    private static let panelInteriorTop: CGFloat = 346
+    private static let panelInteriorCentreX: CGFloat = 6
+    private static let panelInteriorWidth: CGFloat = 554
 
-    /// Distance from the top of the window to the first row's baseline.
-    private static let listInset: CGFloat = 40
+    /// The strip taken off the top of the interior for the column headings.
+    private static let headerHeight: CGFloat = 56
+
+    /// The clip region for the rows: the panel interior less the heading strip.
+    ///
+    /// The headings have to sit *outside* this, not merely above it in z — a row scrolled to
+    /// the top of the full interior would otherwise slide up into the heading strip and be
+    /// drawn over them.
+    private static let rowWindowSize = CGSize(width: panelInteriorWidth, height: 794 - headerHeight)
+    private static let rowWindowOrigin = CGPoint(x: panelInteriorCentreX, y: -51 - headerHeight/2)
+
+    /// Distance from the top and bottom of the row window to the nearest row.
+    private static let listInset: CGFloat = 36
+
+    private static let headerFontSize: CGFloat = 16
+    private static let headerColor = SKColor(white: 1.0, alpha: 0.6)
+    private static let headerRuleColor = SKColor(white: 1.0, alpha: 0.18)
 
     private static let rowSpacing: CGFloat = 48
     private static let rowFontSize: CGFloat = 24
@@ -77,6 +92,12 @@ class HighscoreScene: SKScene {
 
     private let toggleFooter = SKLabelNode(fontNamed: SettingsDropdown.fontName)
     private let rankFooter = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+
+    /// Column headings, pinned above the scrolling rows.
+    private let header = SKNode()
+    private let rankHeading = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+    private let middleHeading = SKLabelNode(fontNamed: SettingsDropdown.fontName)
+    private let scoreHeading = SKLabelNode(fontNamed: SettingsDropdown.fontName)
 
     // MARK: - State
 
@@ -169,6 +190,7 @@ class HighscoreScene: SKScene {
         }
 
         setUpWindow()
+        setUpHeader()
         setUpFooters()
         layoutContent()
 
@@ -183,13 +205,48 @@ class HighscoreScene: SKScene {
 
     private func setUpWindow() {
         let crop = SKCropNode()
-        crop.maskNode = SKSpriteNode(color: .black, size: Self.windowSize)
-        crop.position = Self.windowOrigin
+        crop.maskNode = SKSpriteNode(color: .black, size: Self.rowWindowSize)
+        crop.position = Self.rowWindowOrigin
         crop.zPosition = 40
 
         content.position = CGPoint(x: 0, y: listTopY)
         crop.addChild(content)
         addChild(crop)
+    }
+
+    /// Builds the headings and the rule under them, in scene coordinates, sitting in the
+    /// strip above the row window.
+    private func setUpHeader() {
+        let baselineY = Self.panelInteriorTop - 22
+        let ruleY = Self.panelInteriorTop - Self.headerHeight + 6
+
+        let columns: [(SKLabelNode, CGFloat, SKLabelHorizontalAlignmentMode)] = [
+            (rankHeading, Self.rankRightX, .right),
+            (middleHeading, Self.middleLeftX, .left),
+            (scoreHeading, Self.scoreRightX, .right)
+        ]
+
+        for (node, columnX, alignment) in columns {
+            node.fontSize = Self.headerFontSize
+            node.fontColor = Self.headerColor
+            node.verticalAlignmentMode = .center
+            node.horizontalAlignmentMode = alignment
+            node.position = CGPoint(x: Self.panelInteriorCentreX + columnX, y: baselineY)
+            header.addChild(node)
+        }
+
+        let halfWidth = Self.panelInteriorWidth/2
+        let rule = SKShapeNode()
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: Self.panelInteriorCentreX - halfWidth, y: ruleY))
+        path.addLine(to: CGPoint(x: Self.panelInteriorCentreX + halfWidth, y: ruleY))
+        rule.path = path.cgPath
+        rule.lineWidth = 2
+        rule.strokeColor = Self.headerRuleColor
+        header.addChild(rule)
+
+        header.zPosition = 45
+        addChild(header)
     }
 
     private func setUpFooters() {
@@ -247,7 +304,18 @@ class HighscoreScene: SKScene {
     // MARK: - Layout
 
     private var listTopY: CGFloat {
-        Self.windowSize.height/2 - Self.listInset
+        Self.rowWindowSize.height/2 - Self.listInset
+    }
+
+    /// Headings describe columns, so they're hidden whenever there are no columns to
+    /// describe — an empty list, a load in flight, or a failure.
+    private func updateHeader(showing: Bool) {
+        header.alpha = showing ? 1 : 0
+        guard showing else { return }
+
+        rankHeading.text = "#"
+        scoreHeading.text = "SCORE"
+        middleHeading.text = mode == .local ? "DATE" : "PLAYER"
     }
 
     private func label(_ text: String, size: CGFloat, color: SKColor) -> SKLabelNode {
@@ -264,6 +332,7 @@ class HighscoreScene: SKScene {
     /// it's twenty rows, and it only runs on a mode switch or a completed load.
     private func layoutContent() {
         content.removeAllChildren()
+        updateHeader(showing: hasRows)
 
         switch mode {
         case .local:
@@ -289,6 +358,17 @@ class HighscoreScene: SKScene {
         }
 
         updateFooters()
+    }
+
+    /// Whether the current mode and state will draw actual rows, as opposed to a message.
+    private var hasRows: Bool {
+        switch mode {
+        case .local:
+            return !scores.isEmpty
+        case .global:
+            if case .loaded(let standings) = globalState { return !standings.entries.isEmpty }
+            return false
+        }
     }
 
     private func localRows() -> [Row] {
@@ -318,7 +398,7 @@ class HighscoreScene: SKScene {
         velocity = 0
         content.position.y = listTopY
 
-        let centreY = -Self.windowSize.height/2 + Self.listInset
+        let centreY = -Self.rowWindowSize.height/2 + Self.listInset
 
         let headline = label(text, size: 32, color: Self.rowColor)
         headline.horizontalAlignmentMode = .center
@@ -425,7 +505,7 @@ class HighscoreScene: SKScene {
             rankFooter.alpha = 0
 
         case .global:
-            toggleFooter.text = "<  LOCAL SCORES"
+            toggleFooter.text = "<  YOUR SCORES"
             toggleFooter.alpha = 1
 
             // Doubles as the way into the system leaderboard, because there is only room for
@@ -446,7 +526,7 @@ class HighscoreScene: SKScene {
 
     /// How far the list can travel before its last row reaches the bottom of the window.
     private var maxScroll: CGFloat {
-        max(0, contentHeight - Self.windowSize.height + Self.listInset * 2)
+        max(0, contentHeight - Self.rowWindowSize.height + Self.listInset * 2)
     }
 
     // MARK: - Navigation
