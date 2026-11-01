@@ -8,7 +8,7 @@
 import SpriteKit
 import GameplayKit
 
-class SettingsScene: SKScene {
+class SettingsScene: SKScene, PresentedScene {
     private var buttons: [SKButton] = []
 
     let HEIGHT : CGFloat = GameViewController.HEIGHT
@@ -29,8 +29,7 @@ class SettingsScene: SKScene {
         if let scene = SKScene(fileNamed: "StartScene") {
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
+            transition(to: scene)
         }
     }
     
@@ -45,7 +44,7 @@ class SettingsScene: SKScene {
     }
     
     
-    override func didMove(to view: SKView) {
+    func didPresent() {
         background.anchorPoint = CGPoint(x:0.5,y:1.0)
         background.position.y = GameViewController.HEIGHT/2
         self.addChild(background)
@@ -96,11 +95,11 @@ class SettingsScene: SKScene {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
 
-        for t in touches { self.touchDown(atPoint: t.location(in: self)) }
+        for t in touches { self.touchDown(atPoint: location(of: t)) }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
+        for t in touches { self.touchUp(atPoint: location(of: t)) }
     }
    
 }

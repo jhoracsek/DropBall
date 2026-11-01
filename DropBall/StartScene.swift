@@ -10,7 +10,7 @@ import GameplayKit
 
 
 
-class StartScene: SKScene {
+class StartScene: SKScene, PresentedScene {
     
     let offset: CGFloat = -50
 
@@ -47,7 +47,7 @@ class StartScene: SKScene {
     
     
     
-    override func didMove(to view: SKView) {
+    func didPresent() {
         Entity.cameraTranslationY = 0
         Entity.cameraTranslationX = 0
 
@@ -150,8 +150,7 @@ class StartScene: SKScene {
         if let scene = SKScene(fileNamed: "GameScene") {
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
+            transition(to: scene)
         }
     }
     
@@ -159,8 +158,7 @@ class StartScene: SKScene {
         if let scene = SKScene(fileNamed: "HighscoreScene") {
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
+            transition(to: scene)
         }
     }
     
@@ -173,7 +171,7 @@ class StartScene: SKScene {
         let scene = AttributionsScene(size: CGSize(width: GameViewController.WIDTH,
                                                    height: GameViewController.HEIGHT))
         scene.scaleMode = .aspectFill
-        view?.presentScene(scene, transition: SKTransition.crossFade(withDuration: 0.5))
+        transition(to: scene)
     }
     
     func touchDown(atPoint pos : CGPoint) {
@@ -200,19 +198,19 @@ class StartScene: SKScene {
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchDown(atPoint: t.location(in: self)) }
+        for t in touches { self.touchDown(atPoint: location(of: t)) }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
+        for t in touches { self.touchMoved(toPoint: location(of: t)) }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
+        for t in touches { self.touchUp(atPoint: location(of: t)) }
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
+        for t in touches { self.touchUp(atPoint: location(of: t)) }
     }
     
     override func update(_ currentTime: TimeInterval) {

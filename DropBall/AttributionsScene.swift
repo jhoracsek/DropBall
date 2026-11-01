@@ -11,7 +11,7 @@ import UIKit
 ///
 /// Built in code rather than from a .sks, so it's presented with `AttributionsScene(size:)`
 /// rather than `SKScene(fileNamed:)` like the older scenes.
-final class AttributionsScene: SKScene {
+final class AttributionsScene: SKScene, PresentedScene {
 
     // MARK: - Layout
 
@@ -76,7 +76,7 @@ final class AttributionsScene: SKScene {
 
     // MARK: - Setup
 
-    override func didMove(to view: SKView) {
+    func didPresent() {
         // A scene built in code defaults to an anchorPoint of (0,0) — the bottom-left
         // corner — whereas the .sks scenes are all authored at (0.5, 0.5). Every position
         // in this file assumes a centre origin like the rest of the game, so without this
@@ -283,14 +283,14 @@ final class AttributionsScene: SKScene {
         if let scene = SKScene(fileNamed: "StartScene") {
             scene.size = CGSize(width: GameViewController.WIDTH, height: GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            view?.presentScene(scene, transition: SKTransition.crossFade(withDuration: 0.5))
+            transition(to: scene)
         }
     }
 
     // MARK: - Input
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let pos = touches.first?.location(in: self) else { return }
+        guard let pos = touches.first.map(location(of:)) else { return }
 
         homeButton.checkPressed(pos: pos)
 
@@ -300,7 +300,7 @@ final class AttributionsScene: SKScene {
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let pos = touches.first?.location(in: self) else { return }
+        guard let pos = touches.first.map(location(of:)) else { return }
 
         let delta = pos.y - dragStartY
         dragDistance = max(dragDistance, abs(delta))
@@ -312,7 +312,7 @@ final class AttributionsScene: SKScene {
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         homeButton.unpressed()
 
-        guard let pos = touches.first?.location(in: self) else { return }
+        guard let pos = touches.first.map(location(of:)) else { return }
 
         // Only treat it as a tap if the finger barely moved, so scrolling past a link
         // doesn't open it.

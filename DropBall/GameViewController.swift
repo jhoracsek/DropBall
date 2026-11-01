@@ -45,23 +45,20 @@ class GameViewController: UIViewController {
         // view controller for it to be presented from.
         GameCenter.authenticate()
 
-        if let view = self.view as? SKView {
-            view.ignoresSiblingOrder = true
-            view.shouldCullNonVisibleNodes = true
+        // Scenes are drawn by SceneRenderer into a plain Metal view rather than by an
+        // SKView; see SceneRenderer for why. It also shows the debug FPS readout.
+        if let view = self.view as? SceneView {
+            sceneRenderer = SceneRenderer(view: view)
 
             if let scene = SKScene(fileNamed: "StartScene") {
                 scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
                 scene.scaleMode = .aspectFill
-                view.presentScene(scene)
+                sceneRenderer?.present(scene)
             }
-
-            // Debug overlays are useful while developing but must never reach a release build.
-            #if DEBUG
-            view.showsFPS = true
-            view.showsNodeCount = true
-            #endif
         }
     }
+
+    private var sceneRenderer: SceneRenderer?
 
     override var shouldAutorotate: Bool {
         return false

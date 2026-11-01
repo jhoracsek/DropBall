@@ -13,7 +13,7 @@ import SpriteKit
 ///
 /// Still loaded from HighscoreScene.sks, which holds no nodes of its own — it exists to carry
 /// the custom class and the centred anchor point that every .sks scene in the project uses.
-class HighscoreScene: SKScene {
+class HighscoreScene: SKScene, PresentedScene {
     let HEIGHT : CGFloat = GameViewController.HEIGHT
     let WIDTH : CGFloat = GameViewController.WIDTH
 
@@ -163,7 +163,7 @@ class HighscoreScene: SKScene {
 
     // MARK: - Setup
 
-    override func didMove(to view: SKView) {
+    func didPresent() {
         getScores()
 
         background.anchorPoint = CGPoint(x:0.5,y:1.0)
@@ -537,8 +537,7 @@ class HighscoreScene: SKScene {
         if let scene = SKScene(fileNamed: "StartScene") {
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
+            transition(to: scene)
         }
     }
 
@@ -687,18 +686,18 @@ class HighscoreScene: SKScene {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchDown(atPoint: t.location(in: self)) }
+        for t in touches { self.touchDown(atPoint: location(of: t)) }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
+        for t in touches { self.touchMoved(toPoint: location(of: t)) }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
+        for t in touches { self.touchUp(atPoint: location(of: t)) }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
+        for t in touches { self.touchUp(atPoint: location(of: t)) }
     }
 }

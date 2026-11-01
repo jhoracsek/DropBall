@@ -112,9 +112,8 @@ enum BackgroundOverlay {
 
     /// Stops or resumes the drift for one reason, and keeps the clock honest while stopped.
     ///
-    /// The caller is responsible for freezing the node itself where that's needed. Going to
-    /// the background doesn't need it — iOS stops the render loop, so the actions can't
-    /// advance anyway — but an in-game pause does, since the loop keeps running.
+    /// The bands read their position straight from this clock, so stopping it is enough to
+    /// stop them — and resuming carries on from exactly where they were.
     static func setPaused(_ paused: Bool, reason: PauseReason) {
         let wasStopped = !pauseReasons.isEmpty
 
@@ -141,10 +140,6 @@ enum BackgroundOverlay {
         root.alpha = opacity
 
         let scale = GameViewController.WIDTH / sourceArtWidth
-
-        // Read once and shared by both bands, so they're guaranteed to be in phase with
-        // each other rather than sampling the clock a fraction apart.
-        let elapsed = driftTime
 
         let topTexture = SKTexture(imageNamed: "bg_overlay_top")
         let bottomTexture = SKTexture(imageNamed: "bg_overlay_bottom")
@@ -183,14 +178,14 @@ enum BackgroundOverlay {
         root.addChild(fill)
 
         let top = band(texture: topTexture, scale: scale,
-                       speed: topSpeed, movingLeft: true, elapsed: elapsed,
+                       speed: topSpeed, movingLeft: true,
                        startFraction: topStartFraction,
                        verticalCopies: topCopies)
         top.position.y = bottomTop + topHeight/2
         root.addChild(top)
 
         let bottom = band(texture: bottomTexture, scale: scale,
-                          speed: bottomSpeed, movingLeft: false, elapsed: elapsed,
+                          speed: bottomSpeed, movingLeft: false,
                           startFraction: bottomStartFraction,
                           verticalCopies: 1)
         bottom.position.y = bottomTop - bottomHeight/2
@@ -199,12 +194,11 @@ enum BackgroundOverlay {
         return root
     }
 
-    /// One scrolling band: two copies of the strip and an action that loops them.
+    /// One scrolling band: two copies of the strip, positioned from the drift clock.
     private static func band(texture: SKTexture,
                              scale: CGFloat,
                              speed: CGFloat,
                              movingLeft: Bool,
-                             elapsed: CGFloat,
                              startFraction: CGFloat,
                              verticalCopies: Int) -> SKNode {
         let container = SKNode()
@@ -229,45 +223,28 @@ enum BackgroundOverlay {
             }
         }
 
-        // Pick up where the last scene left off, offset by this launch's random start. The
-        // texture repeats every `width`, so only the remainder matters — which also keeps
-        // the result inside [0, width) whatever the random offset was.
-        let travelled = elapsed * speed + startFraction * width
-        let phase = travelled.truncatingRemainder(dividingBy: width)
-        container.position.x = movingLeft ? -phase : phase
+        // Offset by this launch's random start. The texture repeats every `width`, so only
+        // the remainder matters, which also keeps the result inside [0, width).
+        func position() -> CGFloat {
+            let travelled = driftTime * speed + startFraction * width
+            let phase = travelled.truncatingRemainder(dividingBy: width)
+            return movingLeft ? -phase : phase
+        }
 
-        let distance = movingLeft ? -width : width
+        container.position.x = position()
 
-        // Finish the cycle already in progress, then loop from the top.
+        // Set from the clock every frame, rather than moved by actions. Under SKRenderer a
+        // paused move action leaps ahead on resume to make up the time, and the band then
+        // disagrees with the clock the next scene starts from. Read from the clock, the
+        // band stops and resumes exactly with it, and every scene that builds one agrees
+        // on where it is — so there's nothing to hand over between scenes either.
         //
-        // This first leg matters. The repeating cycle below is a *relative* move, so running
-        // it straight from a phase-shifted start would carry the container a full width
-        // beyond that offset — up to two widths from the origin, which is outside the range
-        // two copies can span. The band then scrolls clear of the screen and nothing is drawn
-        // until the trailing copy arrives. A large phase broke it and a small one didn't,
-        // which is why it looked intermittent and differed from scene to scene.
-        //
-        // Covering the remainder first lands the container exactly on the origin, so the
-        // loop runs canonically from there and never leaves bounds.
-        let remaining = width - phase
-        let catchUp = SKAction.sequence([
-            .moveBy(x: movingLeft ? -remaining : remaining, y: 0,
-                    duration: TimeInterval(remaining / speed)),
-            .moveBy(x: -distance, y: 0, duration: 0)
-        ])
-
-        // Slide exactly one strip width, then snap back instantly. Because the second copy
-        // sits exactly one width along, the snap lands it precisely where the first was,
-        // making the restart invisible.
-        //
-        // Actions rather than per-frame work, so this needs no update() wiring and runs
-        // identically in all four scenes — including AttributionsScene, which has none.
-        let cycle = SKAction.sequence([
-            .moveBy(x: distance, y: 0, duration: TimeInterval(width / speed)),
-            .moveBy(x: -distance, y: 0, duration: 0)
-        ])
-
-        container.run(.sequence([catchUp, .repeatForever(cycle)]))
+        // An action rather than per-frame code in each scene, so this needs no update()
+        // wiring and runs in all four scenes, including AttributionsScene, which has none.
+        let follow = SKAction.customAction(withDuration: 1) { node, _ in
+            node.position.x = position()
+        }
+        container.run(.repeatForever(follow))
 
         return container
     }

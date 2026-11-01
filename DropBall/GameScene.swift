@@ -10,7 +10,7 @@ import GameplayKit
 import AudioToolbox
 import CoreData
 
-class GameScene: SKScene {
+class GameScene: SKScene, PresentedScene {
     private var score = 0
 
     /// Draws the collision shapes over the ball and platforms. Development aid only;
@@ -104,7 +104,7 @@ class GameScene: SKScene {
         }
     }
     
-    override func didMove(to view: SKView) {
+    func didPresent() {
         self.backgroundColor = SKColor(red: 18/256, green: 45/256, blue: 110/256, alpha: 1)
         background.anchorPoint = CGPoint(x:0.5,y:1.0)
         background.position.y = GameViewController.HEIGHT/2
@@ -280,8 +280,7 @@ class GameScene: SKScene {
         if let scene = SKScene(fileNamed: "GameScene") {
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
+            transition(to: scene)
         }
     }
     
@@ -353,7 +352,7 @@ class GameScene: SKScene {
         // Checked before anything else so a toggle tap never starts a hold or nudges the
         // ball. Compiled out entirely in release.
         #if DEBUG
-        if let point = touches.first?.location(in: self),
+        if let point = touches.first.map(location(of:)),
            debugOverlay?.handleTouch(at: point) == true {
             return
         }
@@ -363,7 +362,7 @@ class GameScene: SKScene {
         isHolding = false
         
         if let touch = touches.first {
-            initialHoldLocation = touch.location(in: self)
+            initialHoldLocation = location(of: touch)
         }
         
         holdTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false){ [weak self] _ in
@@ -378,14 +377,14 @@ class GameScene: SKScene {
         }
         
         for t in touches {
-            self.touchDown(atPoint: t.location(in: self))
+            self.touchDown(atPoint: location(of: t))
             return
         }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = touches.first {
-            let location = touch.location(in: self)
+            let location = location(of: touch)
             
             if !isHolding{
                 let distance = hypot(location.x - initialHoldLocation.x, location.y - initialHoldLocation.y)
@@ -397,20 +396,20 @@ class GameScene: SKScene {
         
         
         for t in touches {
-            self.touchMoved(toPoint: t.location(in: self))
+            self.touchMoved(toPoint: location(of: t))
             return
         }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         endTouch()
-        for t in touches { self.touchUp(atPoint: t.location(in: self));return }
+        for t in touches { self.touchUp(atPoint: location(of: t));return }
         
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         endTouch()
-        for t in touches { self.touchUp(atPoint: t.location(in: self));return }
+        for t in touches { self.touchUp(atPoint: location(of: t));return }
         
     }
     
@@ -425,9 +424,21 @@ class GameScene: SKScene {
         cancelHold()
     }
     
+    /// Seconds to hold off saving after death. The Core Data save, the prune and the Game
+    /// Center submission together overran the frame the ball died on, so they're moved a
+    /// few frames later, while the screen shake is playing and nothing can be tapped yet.
+    private static let saveDelay: TimeInterval = 0.1
+
     func save(){
-        ScoreStore.record(score)
-        GameCenter.submit(score)
+        // Captured now rather than read later, so the deferred work can't see a changed value.
+        let finalScore = score
+
+        // DispatchQueue rather than an SKAction, so the save still goes through if the
+        // scene is paused — backgrounding the app, say — in the gap before it runs.
+        DispatchQueue.main.asyncAfter(deadline: .now() + GameScene.saveDelay) {
+            ScoreStore.record(finalScore)
+            GameCenter.submit(finalScore)
+        }
     }
     
     var gameLost = false
@@ -458,11 +469,11 @@ class GameScene: SKScene {
 
         ball.stopEffects()
 
-        save()
+        // Read before save(), which no longer writes straight away, so this run is folded in
+        // by hand. A fetch limited to one row is cheap enough to stay on this frame.
+        scoreBest.setScore(score: max(ScoreStore.best() ?? 0, score))
 
-        // save() has just recorded this run, so there is normally at least one row. Fall
-        // back to the current score rather than trapping if the fetch comes back empty.
-        scoreBest.setScore(score: ScoreStore.best() ?? score)
+        save()
         
         for sc in scoreDisplay.getSpriteNode(){
             sc.alpha = 0
@@ -543,15 +554,14 @@ class GameScene: SKScene {
         if let scene = SKScene(fileNamed: "StartScene") {
             scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
             scene.scaleMode = .aspectFill
-            let reveal = SKTransition.crossFade(withDuration: 0.5)
-            self.view?.presentScene(scene, transition: reveal)
+            transition(to: scene)
         }
     }
     
-    /// Called by SpriteKit just before this scene is swapped out, which is the only moment
+    /// Called by SceneRenderer just before this scene is swapped out, which is the only moment
     /// the emitter's target node is guaranteed still alive. Tearing the emitter down here
     /// means it can never outlive what it points at.
-    override func willMove(from view: SKView) {
+    func willDismiss() {
         ball.teardownEffects()
 
         // The pause clock is global, so leaving it stopped here would freeze the background
@@ -565,6 +575,21 @@ class GameScene: SKScene {
         #endif
     }
 
+    /// Length of one simulation step. Every speed, acceleration and countdown in the game
+    /// was tuned as an amount per frame at 60fps, so the simulation keeps running in exactly
+    /// those steps and only how many of them happen per rendered frame varies.
+    private static let stepDuration: TimeInterval = 1.0 / 60.0
+
+    /// Most steps a single frame will catch up. A gap longer than this isn't a missed
+    /// refresh but a pause — the app inactive or in the background — and
+    /// is resumed from rather than fast-forwarded through.
+    private static let maxStepsPerFrame = 4
+
+    private var lastUpdateTime: TimeInterval?
+
+    /// Real time not yet turned into steps. Can dip slightly below zero, see update().
+    private var stepAccumulator: TimeInterval = 0
+
     override func update(_ currentTime: TimeInterval) {
         // Tracks memory and node growth once a second. The crash leaves no report, so the
         // last line logged before the app disappears is the evidence.
@@ -573,6 +598,46 @@ class GameScene: SKScene {
                            extra: "platforms=\(platforms.count) clouds=\(clouds.count) score=\(score) ballY=\(Int(ball.posY)) camY=\(Int(Entity.cameraTranslationY)) topY=\(Int(top.posY)) topVel=\(String(format: "%.2f", top.velocity))")
         #endif
 
+        // The movement used to advance one step per rendered frame, so whenever iOS skipped
+        // a frame the whole game visibly stalled. Now real elapsed time decides how many
+        // steps to run: normally one, two after a skipped frame, so the ball ends up where
+        // it should have been rather than a frame behind.
+        var elapsed = lastUpdateTime.map { currentTime - $0 } ?? GameScene.stepDuration
+        lastUpdateTime = currentTime
+
+        // A gap this long means updates were stopped — the app was in the background, or
+        // the scene was paused while the app was inactive. Catching that up would jump the
+        // ball forward the moment play resumes, so treat it as one step.
+        let maxCatchUp = GameScene.stepDuration * Double(GameScene.maxStepsPerFrame)
+        if elapsed > maxCatchUp || elapsed < 0 {
+            elapsed = GameScene.stepDuration
+            stepAccumulator = 0
+        }
+        stepAccumulator += elapsed
+
+        // Rounded rather than floored. Frame times jitter by a fraction of a millisecond
+        // either side of 1/60s, and flooring would turn that into alternating frames of zero
+        // and two steps — a stutter of its own. Rounding absorbs the jitter, leaving the
+        // accumulator within half a step either side of zero.
+        let steps = min(Int((stepAccumulator / GameScene.stepDuration).rounded()),
+                        GameScene.maxStepsPerFrame)
+        stepAccumulator -= Double(steps) * GameScene.stepDuration
+
+        // A frame that needed more than one step means a refresh was missed. Logged with
+        // the gap so skips can be confirmed directly rather than read off the FPS counter.
+        #if DEBUG
+        if steps > 1 {
+            print(String(format: "[frame] skipped: %.1fms since last update, ran %d steps", elapsed * 1000, steps))
+        }
+        #endif
+
+        for _ in 0..<steps {
+            step()
+        }
+    }
+
+    /// One 1/60s tick of the game.
+    private func step() {
         if(gameLost){
             ball.falls = false
             if(shake){
