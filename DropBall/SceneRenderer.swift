@@ -128,6 +128,10 @@ final class SceneRenderer: NSObject {
     private var isInactive = false
 
     #if DEBUG
+    /// Turns the scene-fit guides on or off. See LayoutGuideOverlay.
+    private static let showsLayoutGuides = true
+    private var layoutGuides: LayoutGuideOverlay?
+
     private let fpsLabel = UILabel()
     private var lastPresentedTime: CFTimeInterval = 0
     private var presentedThisSecond = 0
@@ -159,6 +163,13 @@ final class SceneRenderer: NSObject {
         view.metalLayer.framebufferOnly = true
 
         #if DEBUG
+        // Added before the FPS label so the label stays on top of the guides.
+        if Self.showsLayoutGuides {
+            let guides = LayoutGuideOverlay(frame: view.bounds)
+            guides.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            view.addSubview(guides)
+            layoutGuides = guides
+        }
         setUpFPSLabel()
         #endif
 
@@ -205,6 +216,10 @@ final class SceneRenderer: NSObject {
         // Scenes loaded from a .sks file arrive paused, and SKView.presentScene was what
         // unpaused them. One arriving while the app is inactive stays paused like the rest.
         next.isPaused = isInactive
+
+        #if DEBUG
+        layoutGuides?.sceneSize = next.size
+        #endif
 
         if let snapshot {
             attach(snapshot, to: next, at: time)
