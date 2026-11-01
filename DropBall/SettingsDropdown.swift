@@ -62,12 +62,19 @@ final class SettingsDropdown {
     ///
     /// A nil key marks a row that performs an action instead of holding a setting; those
     /// show a chevron rather than ON/OFF.
-    private static let options: [(title: String, disabledKey: String?)] = [
-        ("Rumble", "RumbleOff"),
-        ("Sound Effects", "SoundOff"),
-        ("Music", "MusicOff"),
-        ("Credits", nil)
-    ]
+    private static let options: [(title: String, disabledKey: String?)] = {
+        var options: [(title: String, disabledKey: String?)] = [
+            ("Rumble", "RumbleOff"),
+            ("Sound Effects", "SoundOff"),
+            ("Music", "MusicOff"),
+            ("Credits", nil)
+        ]
+        // Debug builds only, so the row can never ship. Last, apart from the real settings.
+        #if DEBUG
+        options.append(("Debug UI", DebugSettings.overlaysOffKey))
+        #endif
+        return options
+    }()
 
     /// Called when the Credits row is tapped. Set by the scene that owns the dropdown, so
     /// the dropdown doesn't need to know how scenes are presented.

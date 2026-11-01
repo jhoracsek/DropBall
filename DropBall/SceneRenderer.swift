@@ -154,9 +154,6 @@ final class SceneRenderer: NSObject {
 
         renderer.ignoresSiblingOrder = true
         renderer.shouldCullNonVisibleNodes = true
-        #if DEBUG
-        renderer.showsNodeCount = true
-        #endif
 
         view.metalLayer.device = device
         view.metalLayer.pixelFormat = .bgra8Unorm
@@ -171,6 +168,12 @@ final class SceneRenderer: NSObject {
             layoutGuides = guides
         }
         setUpFPSLabel()
+        applyDebugVisibility()
+
+        // The switch is flipped from the settings menu while these are on screen, so they
+        // follow it live. Any UserDefaults change lands here; re-reading one flag is cheap.
+        NotificationCenter.default.addObserver(self, selector: #selector(debugSettingsMayHaveChanged),
+                                               name: UserDefaults.didChangeNotification, object: nil)
         #endif
 
         startDisplayLink()
@@ -471,6 +474,23 @@ final class SceneRenderer: NSObject {
     // MARK: - Debug readout
 
     #if DEBUG
+    /// Shows or hides the FPS label, node count and layout guides together, following the
+    /// "Debug UI" setting.
+    private func applyDebugVisibility() {
+        let visible = DebugSettings.showsOverlays
+        fpsLabel.isHidden = !visible
+        layoutGuides?.isHidden = !visible
+        renderer.showsNodeCount = visible
+    }
+
+    /// UserDefaults posts this from whichever thread wrote the change, so hop to main
+    /// before touching views.
+    @objc private func debugSettingsMayHaveChanged() {
+        DispatchQueue.main.async { [weak self] in
+            self?.applyDebugVisibility()
+        }
+    }
+
     /// Stands in for SKView.showsFPS.
     private func setUpFPSLabel() {
         fpsLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)

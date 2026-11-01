@@ -8,6 +8,19 @@
 import Foundation
 import SpriteKit
 
+/// The one switch for every on-screen debug aid: these test panels, and SceneRenderer's
+/// FPS readout, node count and layout guides. Flipped from the "Debug UI" row in the
+/// settings menu.
+///
+/// Stored as an *off* flag, the same convention as every other setting in that menu.
+enum DebugSettings {
+    static let overlaysOffKey = "DebugOverlaysOff"
+
+    static var showsOverlays: Bool {
+        !UserDefaults.standard.bool(forKey: overlaysOffKey)
+    }
+}
+
 /// A small panel of on-screen toggles for testing.
 ///
 /// The whole file is inside `#if DEBUG`, so none of it is compiled into a release build and
@@ -103,6 +116,11 @@ final class DebugOverlay {
         container.zPosition = 10_000
         container.position = CGPoint(x: -sceneSize.width/2 + Self.buttonSize.width/2 + 24,
                                      y: sceneSize.height/2 - 70)
+
+        // Read once: the switch lives on the main menu, and every scene with a panel is
+        // rebuilt each time it's shown, so it can't change while this one exists.
+        container.isHidden = !DebugSettings.showsOverlays
+
         target.addChild(container)
     }
 
@@ -134,6 +152,10 @@ final class DebugOverlay {
     /// - Returns: true if a toggle was hit, so the scene can swallow the touch rather than
     ///   treating it as gameplay input.
     func handleTouch(at scenePoint: CGPoint) -> Bool {
+        // Hidden buttons mustn't be pressable — otherwise a tap in that corner would toggle
+        // something invisible instead of reaching the game.
+        guard !container.isHidden else { return false }
+
         // The container is only ever translated, never rotated or scaled, so converting
         // into its space is a plain subtraction.
         let local = CGPoint(x: scenePoint.x - container.position.x,
