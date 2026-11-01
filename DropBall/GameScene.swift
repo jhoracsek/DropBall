@@ -602,6 +602,15 @@ class GameScene: SKScene, PresentedScene {
         // a frame the whole game visibly stalled. Now real elapsed time decides how many
         // steps to run: normally one, two after a skipped frame, so the ball ends up where
         // it should have been rather than a frame behind.
+        // Held still until the scene has finished fading in, or the ball would already be
+        // falling fast by the time the player can see it. The first update still runs a
+        // step, which puts the score and everything else in place for the fade. The clock
+        // keeps advancing meanwhile, so play then starts without a catch-up jump.
+        if SceneRenderer.shared?.isTransitioning == true, lastUpdateTime != nil {
+            lastUpdateTime = currentTime
+            return
+        }
+
         var elapsed = lastUpdateTime.map { currentTime - $0 } ?? GameScene.stepDuration
         lastUpdateTime = currentTime
 

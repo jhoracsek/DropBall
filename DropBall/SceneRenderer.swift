@@ -182,6 +182,13 @@ final class SceneRenderer: NSObject {
         pendingScene = scene
     }
 
+    /// True while a scene change is waiting or the cross-fade is still running. The
+    /// incoming scene keeps being updated meanwhile, so a scene whose logic shouldn't start
+    /// until it's fully visible can hold itself back by checking this.
+    var isTransitioning: Bool {
+        pendingScene != nil || fadeOverlay != nil
+    }
+
     private func applyPendingScene(at time: CFTimeInterval) {
         guard let next = pendingScene else { return }
         pendingScene = nil
