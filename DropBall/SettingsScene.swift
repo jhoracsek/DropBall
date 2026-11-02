@@ -53,7 +53,7 @@ class SettingsScene: SKScene, PresentedScene {
         addChild(mountains)
         mountains.anchorPoint = CGPoint(x:0,y:0)
         mountains.position.x = -WIDTH/2
-        mountains.position.y = -HEIGHT/2
+        mountains.position.y = GameViewController.mountainsBaseY
         mountains.zPosition = -0.9
 
         if(rumbleOff){
@@ -69,6 +69,9 @@ class SettingsScene: SKScene, PresentedScene {
 
         homeButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: go_home )
         homeButton.scale(scale: 0.65)
+        // Pulled in from the corner only where it would otherwise be off-screen or under
+        // the camera, rounded corners or home indicator.
+        homeButton.keep(inside: safeFrame)
         buttons.append(homeButton)
 
         rumbleButton = SKButton(x:0, y:0, unclick:"play", click:"play", test_function: toggle_rumble )

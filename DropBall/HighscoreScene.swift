@@ -66,8 +66,9 @@ class HighscoreScene: SKScene, PresentedScene {
     private static let footerColor = SKColor(red: 0.07, green: 0.14, blue: 0.32, alpha: 1.0)
     private static let footerLinkColor = SKColor(red: 0.06, green: 0.27, blue: 0.62, alpha: 1.0)
 
-    /// The panel bottoms out at -500 and the shortest supported scene is half-height 667, so
-    /// there is only about 167 points of sky underneath. Two rows is what fits.
+    /// The panel bottoms out at -500, and on a 16:9 phone (half-height 667) that leaves
+    /// about 167 points of sky underneath. Two rows is what fits. Shorter scenes scale the
+    /// whole group down instead — see fitPanel().
     private static let toggleFooterY: CGFloat = -542
     private static let rankFooterY: CGFloat = -596
 
@@ -89,6 +90,10 @@ class HighscoreScene: SKScene, PresentedScene {
 
     private let content = SKNode()
     private var contentHeight: CGFloat = 0
+
+    /// The panel art, the list, its headings and the footers, kept together so the whole
+    /// layout can be scaled down as one on a screen too short for it.
+    private let panel = SKNode()
 
     private let toggleFooter = SKLabelNode(fontNamed: SettingsDropdown.fontName)
     private let rankFooter = SKLabelNode(fontNamed: SettingsDropdown.fontName)
@@ -173,17 +178,20 @@ class HighscoreScene: SKScene, PresentedScene {
 
         // Over the gradient, under the mountains (-0.9).
         addChild(BackgroundOverlay.make())
-        addChild(scoreOverlay)
+        panel.addChild(scoreOverlay)
         scoreOverlay.zPosition = 10
 
         addChild(mountains)
         mountains.anchorPoint = CGPoint(x:0,y:0)
         mountains.position.x = -WIDTH/2
-        mountains.position.y = -HEIGHT/2
+        mountains.position.y = GameViewController.mountainsBaseY
         mountains.zPosition = -0.9
 
         homeButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: go_home )
         homeButton.scale(scale: 0.65)
+        // Pulled in from the corner only where it would otherwise be off-screen or under
+        // the camera, rounded corners or home indicator.
+        homeButton.keep(inside: safeFrame)
 
         for child in homeButton.getSpriteNode(){
             addChild(child)
@@ -193,6 +201,9 @@ class HighscoreScene: SKScene, PresentedScene {
         setUpHeader()
         setUpFooters()
         layoutContent()
+
+        addChild(panel)
+        fitPanel()
 
         #if DEBUG
         setUpDebugOverlay()
@@ -211,7 +222,7 @@ class HighscoreScene: SKScene, PresentedScene {
 
         content.position = CGPoint(x: 0, y: listTopY)
         crop.addChild(content)
-        addChild(crop)
+        panel.addChild(crop)
     }
 
     /// Builds the headings and the rule under them, in scene coordinates, sitting in the
@@ -246,7 +257,7 @@ class HighscoreScene: SKScene, PresentedScene {
         header.addChild(rule)
 
         header.zPosition = 45
-        addChild(header)
+        panel.addChild(header)
     }
 
     private func setUpFooters() {
@@ -259,8 +270,39 @@ class HighscoreScene: SKScene, PresentedScene {
             node.position = CGPoint(x: 0, y: y)
             node.zPosition = 20
             node.alpha = 0
-            addChild(node)
+            panel.addChild(node)
         }
+    }
+
+    /// Lowest point of the panel group, in its own coordinates: the second footer, with
+    /// room for its touch padding.
+    private static let panelGroupBottom: CGFloat = rankFooterY - 30
+
+    /// Scales and centres the panel group into the safe space below the home button, but
+    /// only when the layout as designed doesn't fit — so every screen it already fitted is
+    /// left exactly as it was. Squat screens like the folded iPhone Duo give the scene too
+    /// little height for the panel plus its footers.
+    private func fitPanel() {
+        let safe = safeFrame
+        let margin: CGFloat = 12
+
+        let top = min(safe.maxY, homeButton.y - homeButton.unclickedSprite.size.height/2) - margin
+        let bottom = safe.minY + margin
+        let groupTop = scoreOverlay.size.height/2
+        let groupHeight = groupTop - Self.panelGroupBottom
+        let groupWidth = scoreOverlay.size.width
+
+        let fitsAsDesigned = groupTop <= top && Self.panelGroupBottom >= bottom
+            && -groupWidth/2 >= safe.minX + margin && groupWidth/2 <= safe.maxX - margin
+        guard !fitsAsDesigned else { return }
+
+        let scale = min(1, (top - bottom) / groupHeight, (safe.width - 2 * margin) / groupWidth)
+        panel.setScale(scale)
+
+        // Centred in the space available rather than on the screen, since that space can be
+        // lopsided — the folded Duo's camera strip runs down the right-hand side only.
+        let groupMidY = (groupTop + Self.panelGroupBottom) / 2
+        panel.position = CGPoint(x: safe.midX, y: (top + bottom) / 2 - groupMidY * scale)
     }
 
     // MARK: - Mode
@@ -583,33 +625,40 @@ class HighscoreScene: SKScene, PresentedScene {
         }
         #endif
 
+        // The list and footers live in the panel, which may be scaled down, so they're
+        // tested in its coordinates. The home button sits outside it, in the scene's.
+        let local = panel.convert(pos, from: self)
+
         // Footers are checked before the drag starts, and only while visible, so a tap
         // landing there before sign-in has finished can't trigger anything.
-        if hits(toggleFooter, pos) || hits(rankFooter, pos) {
+        if hits(toggleFooter, local) || hits(rankFooter, local) {
             return
         }
 
         homeButton.checkPressed(pos: pos)
 
         isDragging = true
-        dragStartY = pos.y
+        dragStartY = local.y
         dragStartScroll = scrollY
         dragDistance = 0
         velocity = 0
-        previousTouchY = pos.y
-        currentTouchY = pos.y
+        previousTouchY = local.y
+        currentTouchY = local.y
     }
 
     func touchMoved(toPoint pos : CGPoint) {
         guard isDragging else { return }
 
+        // In the panel's coordinates, so the list tracks the finger even when scaled.
+        let local = panel.convert(pos, from: self)
+
         previousTouchY = currentTouchY
-        currentTouchY = pos.y
+        currentTouchY = local.y
 
         // Velocity is the last frame's finger movement, which becomes the fling speed on lift.
         velocity = currentTouchY - previousTouchY
 
-        let delta = pos.y - dragStartY
+        let delta = local.y - dragStartY
         dragDistance = max(dragDistance, abs(delta))
 
         scrollY = min(max(dragStartScroll + delta, 0), maxScroll)
@@ -626,7 +675,7 @@ class HighscoreScene: SKScene, PresentedScene {
 
         // A tap rather than a scroll, so nothing should coast afterwards.
         velocity = 0
-        handleTap(at: pos)
+        handleTap(at: panel.convert(pos, from: self))
     }
 
     /// Whether a touch landed on a visible footer, acting on it if so.

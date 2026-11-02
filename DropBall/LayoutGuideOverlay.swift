@@ -9,13 +9,14 @@ import UIKit
 
 /// Debug-only guides showing how the scene fits the screen it's on.
 ///
-/// The scene is a fixed size, drawn to fill the screen while keeping its shape, so on a
-/// screen of a different shape some of it is cropped. This draws:
-/// - the scene's outline, with a square in each of its corners — a square that's cut off,
-///   or missing, marks scene content that isn't visible on this screen;
+/// The scene is shaped to the screen and fitted inside it, so on most screens it fills it
+/// exactly; on one squatter than 16:9 it's narrower, with bars down the sides. This draws:
+/// - the scene's outline, with a square in each of its corners, marking where the game's
+///   area ends;
 /// - the safe area — the region clear of the Dynamic Island, the rounded corners and the
-///   home indicator, which is where anything that has to be seen or tapped belongs;
-/// - a readout of the sizes involved and how much is cropped from each side.
+///   home indicator, which is where anything that has to be seen or tapped belongs. Uses
+///   gameSafeAreaInsets, the same insets the game lays out against, limited to the scene;
+/// - a readout of the sizes involved and how wide any bars are.
 ///
 /// Redrawn whenever the view's size or safe area changes, so it stays correct if the
 /// window is resized while the app runs.
@@ -70,21 +71,23 @@ final class LayoutGuideOverlay: UIView {
         refresh()
     }
 
-    private func refresh() {
+    /// Redraws the guides. Also called by SceneRenderer when the Zoom to Fill setting
+    /// changes, since that changes the mapping without changing any size.
+    func refresh() {
         updateReadout()
         setNeedsDisplay()
     }
 
     // MARK: - Geometry
 
-    /// Screen points per scene point. The same aspect-fill scale SceneRenderer draws with.
+    /// Screen points per scene point — the same scale SceneRenderer draws with.
     private var scale: CGFloat {
-        guard sceneSize.width > 0, sceneSize.height > 0 else { return 0 }
-        return max(bounds.width / sceneSize.width, bounds.height / sceneSize.height)
+        SceneRenderer.displayScale(sceneSize, in: bounds.size)
     }
 
-    /// Where the whole scene lands in this view's coordinates. Larger than the view on
-    /// whichever axis is being cropped.
+    /// Where the whole scene lands in this view's coordinates. Narrower than the view where
+    /// the screen is squatter than 16:9, leaving bars down the sides — or, zoomed to fill,
+    /// taller than it, with the top and bottom cropped.
     private var sceneFrame: CGRect {
         let width = sceneSize.width * scale
         let height = sceneSize.height * scale
@@ -121,8 +124,10 @@ final class LayoutGuideOverlay: UIView {
             UIBezierPath(rect: CGRect(origin: origin, size: CGSize(width: side, height: side))).fill()
         }
 
-        // Safe area.
-        let safeArea = UIBezierPath(rect: bounds.inset(by: safeAreaInsets).insetBy(dx: 1, dy: 1))
+        // Safe area, limited to the scene the same way the game's safe frame is: the bars
+        // beside a narrower scene aren't somewhere content can go.
+        let safeRect = bounds.inset(by: gameSafeAreaInsets).intersection(frame)
+        let safeArea = UIBezierPath(rect: safeRect.insetBy(dx: 1, dy: 1))
         safeArea.lineWidth = 2
         Self.safeAreaColor.setStroke()
         safeArea.stroke()
@@ -138,18 +143,23 @@ final class LayoutGuideOverlay: UIView {
 
         let frame = sceneFrame
 
-        // How much of the scene falls off each axis, in scene points, split evenly between
-        // the two sides because the scene is centred.
+        // Width of each bar beside the scene, in screen points. The scene is centred, so the
+        // spare space is split evenly between the two sides.
+        let barX = max(0, (bounds.width - frame.width) / 2)
+        let barY = max(0, (bounds.height - frame.height) / 2)
+
+        // How much of the scene falls off each axis when zoomed to fill, in scene points.
         let cropX = max(0, (frame.width - bounds.width) / 2) / scale
         let cropY = max(0, (frame.height - bounds.height) / 2) / scale
 
-        let insets = safeAreaInsets
+        let insets = gameSafeAreaInsets
         readout.text = """
          screen \(format(bounds.width)) × \(format(bounds.height)) pt \
         (ratio \(format(bounds.height / bounds.width, decimals: 3))) 
          scene  \(format(sceneSize.width)) × \(format(sceneSize.height)) \
         (ratio \(format(sceneSize.height / sceneSize.width, decimals: 3))) 
          scale  \(format(scale, decimals: 3)) screen pt per scene pt 
+         bars   \(format(barX)) left/right, \(format(barY)) top/bottom (screen pt) 
          crop   \(format(cropX)) left/right, \(format(cropY)) top/bottom (scene pt) 
          safe   top \(format(insets.top)) bottom \(format(insets.bottom)) \
         left \(format(insets.left)) right \(format(insets.right)) (screen pt) 

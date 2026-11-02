@@ -34,6 +34,49 @@ extension SKScene {
     func location(of touch: UITouch) -> CGPoint {
         SceneRenderer.shared?.location(of: touch, in: self) ?? .zero
     }
+
+    /// The part of the scene that's on screen and clear of the camera, the rounded corners
+    /// and the home indicator, in scene coordinates. Anything that has to be seen or tapped
+    /// belongs inside it. Falls back to the whole scene if nothing is drawing it yet.
+    var safeFrame: CGRect {
+        SceneRenderer.shared?.safeFrame(in: self)
+            ?? CGRect(x: -size.width * anchorPoint.x, y: -size.height * anchorPoint.y,
+                      width: size.width, height: size.height)
+    }
+}
+
+extension UIView {
+    /// The safe-area insets the game lays out against: the full width of the screen, with
+    /// any side cutout treated as an obstruction along the top instead.
+    ///
+    /// The folded iPhone Duo's camera is a small circle in the top-right corner, but iOS
+    /// reports it as an 84-point strip down the whole right-hand side, which would narrow
+    /// every screen just to clear the top of it. In a portrait window a side inset on an
+    /// iPhone can only be a cutout like that one, so it's moved to the top: the safe area
+    /// keeps the full width and starts the same distance down instead, which clears the
+    /// camera. On phones without a side inset nothing changes.
+    ///
+    /// Only in portrait. The game is portrait-only, but the unfolded Duo can still give it a
+    /// landscape window, and there a side inset really is down the side — and falls in the
+    /// bars beside the game anyway.
+    ///
+    /// Rounded screen corners are adapted the same way where the system supports it,
+    /// shortening the top or bottom rather than the sides.
+    var gameSafeAreaInsets: UIEdgeInsets {
+        var insets = safeAreaInsets
+        if #available(iOS 26.0, *) {
+            insets = edgeInsets(for: .safeArea(cornerAdaptation: .vertical))
+        }
+
+        let sideInset = max(insets.left, insets.right)
+        let isPortrait = bounds.height >= bounds.width
+        if isPortrait && sideInset > 0 {
+            insets.top = max(insets.top, sideInset)
+            insets.left = 0
+            insets.right = 0
+        }
+        return insets
+    }
 }
 
 /// The app's root view: a Metal layer the scenes are drawn into, which passes touches on to
@@ -157,7 +200,8 @@ final class SceneRenderer: NSObject {
 
         view.metalLayer.device = device
         view.metalLayer.pixelFormat = .bgra8Unorm
-        view.metalLayer.framebufferOnly = true
+        // False so a scene narrower than the screen can be copied into the middle of it.
+        view.metalLayer.framebufferOnly = false
 
         #if DEBUG
         // Added before the FPS label so the label stays on top of the guides.
@@ -252,7 +296,7 @@ final class SceneRenderer: NSObject {
 
         renderer.render(withViewport: CGRect(x: 0, y: 0, width: width, height: height),
                         commandBuffer: commandBuffer,
-                        renderPassDescriptor: renderPass(into: texture, clearingTo: scene))
+                        renderPassDescriptor: renderPass(into: texture, clearingTo: scene.backgroundColor))
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
 
@@ -334,14 +378,62 @@ final class SceneRenderer: NSObject {
         }
     }
 
-    /// Converts a touch into scene coordinates with the same aspect-fill mapping used to
-    /// draw, so a point lands on whatever is drawn under it.
+    /// Screen points per scene point when a scene of `sceneSize` is drawn into an area of
+    /// `areaSize`, keeping its shape.
+    ///
+    /// GameViewController shapes every scene to the screen, so on a phone it fills exactly
+    /// and both choices below come to the same thing. They only differ where the screen is
+    /// squatter than 16:9, such as the folded iPhone Duo. There the scene is fitted inside by
+    /// default (.aspectFit), leaving bars down the sides; with the Zoom to Fill setting on it
+    /// fills the screen instead (.aspectFill), cropping the top and bottom. See ScreenFit.
+    ///
+    /// Everything that maps between screen and scene — drawing, touches, the safe frame and
+    /// the debug guides — goes through this, so they can never disagree.
+    static func displayScale(_ sceneSize: CGSize, in areaSize: CGSize) -> CGFloat {
+        guard sceneSize.width > 0, sceneSize.height > 0 else { return 0 }
+        let widthScale = areaSize.width / sceneSize.width
+        let heightScale = areaSize.height / sceneSize.height
+
+        // Zoom only ever applies to a portrait area. Filling a landscape window's width with
+        // the portrait game would crop away more than half of it, so there the bars stay
+        // whatever the setting says.
+        let zooms = ScreenFit.zoomsToFill && areaSize.height >= areaSize.width
+        return zooms ? max(widthScale, heightScale) : min(widthScale, heightScale)
+    }
+
+    /// Converts a touch into scene coordinates with the same mapping used to draw, so a
+    /// point lands on whatever is drawn under it.
     func location(of touch: UITouch, in scene: SKScene) -> CGPoint {
         let point = touch.location(in: view)
         let bounds = view.bounds.size
-        let scale = max(bounds.width / scene.size.width, bounds.height / scene.size.height)
+        let scale = Self.displayScale(scene.size, in: bounds)
         return CGPoint(x: (point.x - bounds.width / 2) / scale + scene.size.width * (0.5 - scene.anchorPoint.x),
                        y: (bounds.height / 2 - point.y) / scale + scene.size.height * (0.5 - scene.anchorPoint.y))
+    }
+
+    /// The view's safe area, in scene coordinates, using the same mapping as drawing, and
+    /// limited to the scene itself — where the scene doesn't reach the screen's edges, the
+    /// bars beside it aren't somewhere content can go. Each side is converted on its own,
+    /// since the insets needn't be symmetrical. Uses gameSafeAreaInsets, so the folded Duo's
+    /// camera shortens the top rather than the side.
+    func safeFrame(in scene: SKScene) -> CGRect {
+        let bounds = view.bounds.size
+        let insets = view.gameSafeAreaInsets
+        let scale = Self.displayScale(scene.size, in: bounds)
+        guard scale > 0 else { return .zero }
+
+        let centre = CGPoint(x: scene.size.width * (0.5 - scene.anchorPoint.x),
+                             y: scene.size.height * (0.5 - scene.anchorPoint.y))
+        let minX = centre.x + (-bounds.width / 2 + insets.left) / scale
+        let maxX = centre.x + (bounds.width / 2 - insets.right) / scale
+        let minY = centre.y + (-bounds.height / 2 + insets.bottom) / scale
+        let maxY = centre.y + (bounds.height / 2 - insets.top) / scale
+        let safe = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+
+        let sceneRect = CGRect(x: -scene.size.width * scene.anchorPoint.x,
+                               y: -scene.size.height * scene.anchorPoint.y,
+                               width: scene.size.width, height: scene.size.height)
+        return safe.intersection(sceneRect)
     }
 
     // MARK: - App state
@@ -422,10 +514,7 @@ final class SceneRenderer: NSObject {
         advanceCrossFade(at: time)
         renderer.update(atTime: time)
 
-        let drawableSize = CGSize(width: drawable.texture.width, height: drawable.texture.height)
-        renderer.render(withViewport: viewport(for: scene, drawableSize: drawableSize),
-                        commandBuffer: commandBuffer,
-                        renderPassDescriptor: renderPass(into: drawable.texture, clearingTo: scene))
+        draw(scene, into: drawable.texture, commandBuffer: commandBuffer)
 
         #if DEBUG
         #if targetEnvironment(simulator)
@@ -445,11 +534,69 @@ final class SceneRenderer: NSObject {
         commandBuffer.commit()
     }
 
-    /// The scene keeps its aspect ratio and fills the screen — .aspectFill, which every
-    /// scene used — with any overflow cropped equally from both sides.
+    /// Offscreen target for a scene that doesn't fill the screen. Kept between frames and
+    /// only remade when the size it needs changes.
+    private var sceneTexture: MTLTexture?
+
+    /// Draws the scene fitted and centred in `target`, with the bar colour either side.
+    ///
+    /// SKRenderer scales the scene to fill whatever it's rendering into and ignores the size
+    /// of the viewport it's given, so drawing straight into the screen would spread a narrower
+    /// scene across the bars. Where the scene fills the screen — every phone — it's drawn
+    /// directly. Otherwise it's drawn into a texture of exactly its own size, the screen is
+    /// cleared to the bar colour, and the texture is copied into the middle.
+    private func draw(_ scene: SKScene, into target: MTLTexture, commandBuffer: MTLCommandBuffer) {
+        let area = viewport(for: scene, drawableSize: CGSize(width: target.width, height: target.height))
+        let x = max(0, Int(area.minX.rounded()))
+        let y = max(0, Int(area.minY.rounded()))
+        let width = min(target.width - x, Int(area.width.rounded()))
+        let height = min(target.height - y, Int(area.height.rounded()))
+        guard width > 0, height > 0 else { return }
+
+        if x == 0, y == 0, width == target.width, height == target.height {
+            renderer.render(withViewport: CGRect(x: 0, y: 0, width: width, height: height),
+                            commandBuffer: commandBuffer,
+                            renderPassDescriptor: renderPass(into: target, clearingTo: scene.backgroundColor))
+            return
+        }
+
+        guard let offscreen = sceneTexture(width: width, height: height) else { return }
+
+        renderer.render(withViewport: CGRect(x: 0, y: 0, width: width, height: height),
+                        commandBuffer: commandBuffer,
+                        renderPassDescriptor: renderPass(into: offscreen, clearingTo: scene.backgroundColor))
+
+        // A pass with nothing drawn in it, just to clear the screen to the bar colour.
+        commandBuffer.makeRenderCommandEncoder(descriptor: renderPass(into: target, clearingTo: Self.barColor))?
+            .endEncoding()
+
+        guard let blit = commandBuffer.makeBlitCommandEncoder() else { return }
+        blit.copy(from: offscreen, sourceSlice: 0, sourceLevel: 0,
+                  sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+                  sourceSize: MTLSize(width: width, height: height, depth: 1),
+                  to: target, destinationSlice: 0, destinationLevel: 0,
+                  destinationOrigin: MTLOrigin(x: x, y: y, z: 0))
+        blit.endEncoding()
+    }
+
+    private func sceneTexture(width: Int, height: Int) -> MTLTexture? {
+        if let texture = sceneTexture, texture.width == width, texture.height == height {
+            return texture
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.metalLayer.pixelFormat,
+                                                                  width: width, height: height,
+                                                                  mipmapped: false)
+        descriptor.usage = [.renderTarget]
+        descriptor.storageMode = .private
+        sceneTexture = device.makeTexture(descriptor: descriptor)
+        return sceneTexture
+    }
+
+    /// Where the scene goes in the drawable: keeping its shape, centred, at displayScale.
+    /// When zoomed to fill, it overhangs the drawable and draw(_:into:) renders it straight
+    /// to the screen, where SKRenderer's own fill crops the overhang.
     private func viewport(for scene: SKScene, drawableSize: CGSize) -> CGRect {
-        let scale = max(drawableSize.width / scene.size.width,
-                        drawableSize.height / scene.size.height)
+        let scale = Self.displayScale(scene.size, in: drawableSize)
         let width = scene.size.width * scale
         let height = scene.size.height * scale
         return CGRect(x: (drawableSize.width - width) / 2,
@@ -458,9 +605,13 @@ final class SceneRenderer: NSObject {
                       height: height)
     }
 
-    private func renderPass(into texture: MTLTexture, clearingTo scene: SKScene) -> MTLRenderPassDescriptor {
+    /// Fills whatever the scene doesn't cover — the bars down the sides on a screen squatter
+    /// than 16:9. The same deep blue GameScene uses as its background colour.
+    private static let barColor = SKColor(red: 18/256, green: 45/256, blue: 110/256, alpha: 1)
+
+    private func renderPass(into texture: MTLTexture, clearingTo color: SKColor) -> MTLRenderPassDescriptor {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-        scene.backgroundColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
 
         let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = texture
@@ -481,6 +632,9 @@ final class SceneRenderer: NSObject {
         fpsLabel.isHidden = !visible
         layoutGuides?.isHidden = !visible
         renderer.showsNodeCount = visible
+
+        // Zoom to Fill changes the mapping without changing any size the guides watch.
+        layoutGuides?.refresh()
     }
 
     /// UserDefaults posts this from whichever thread wrote the change, so hop to main

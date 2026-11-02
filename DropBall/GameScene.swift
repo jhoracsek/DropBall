@@ -125,17 +125,23 @@ class GameScene: SKScene, PresentedScene {
         addChild(mountains)
         mountains.anchorPoint = CGPoint(x:0,y:0)
         mountains.position.x = -WIDTH/2
-        mountains.position.y = -HEIGHT/2
+        mountains.position.y = GameViewController.mountainsBaseY
         mountains.zPosition = -0.9
         
         
         pauseButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"pause", click:"pause", test_function:
                                 { self.pauseButton.toggleDisable(); self.gamePaused = true;self.resumeButton.toggleDisable();} )
         pauseButton.scale(scale: 0.65)
+        // Pulled in from the corner only where it would otherwise be off-screen or under
+        // the camera, rounded corners or home indicator.
+        pauseButton.keep(inside: safeFrame)
         
         resumeButton = SKButton(x:WIDTH/2-75, y:HEIGHT/2-75, unclick:"resume", click:"resume", test_function:
                                     { if(self.pauseCooldown == 0 ){self.pauseButton.toggleDisable(); self.resumeButton.toggleDisable();self.gamePaused = false; self.pauseCooldown=5}}  )
         resumeButton.scale(scale: 0.65)
+        // Pulled in from the corner only where it would otherwise be off-screen or under
+        // the camera, rounded corners or home indicator.
+        resumeButton.keep(inside: safeFrame)
         
         for i in pauseButton.getSpriteNode(){
             self.addChild(i)

@@ -117,6 +117,15 @@ final class DebugOverlay {
         container.position = CGPoint(x: -sceneSize.width/2 + Self.buttonSize.width/2 + 24,
                                      y: sceneSize.height/2 - 70)
 
+        // Pulled in from the top-left corner only where it would otherwise be off-screen
+        // or under the camera, the same rule as the game's own corner buttons.
+        if let scene = target as? SKScene {
+            let safe = scene.safeFrame
+            let margin: CGFloat = 12
+            container.position.x = max(container.position.x, safe.minX + Self.buttonSize.width/2 + margin)
+            container.position.y = min(container.position.y, safe.maxY - Self.buttonSize.height/2 - margin)
+        }
+
         // Read once: the switch lives on the main menu, and every scene with a panel is
         // rebuilt each time it's shown, so it can't change while this one exists.
         container.isHidden = !DebugSettings.showsOverlays

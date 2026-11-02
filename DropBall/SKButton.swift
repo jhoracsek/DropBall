@@ -98,6 +98,32 @@ class SKButton {
         clickedSprite.size = scaling
     }
     
+    /// Moves the button, carrying its touch area along unchanged.
+    func move(to point: CGPoint){
+        let dx = point.x - x
+        let dy = point.y - y
+        x = point.x
+        y = point.y
+
+        unclickedSprite.position = point
+        clickedSprite.position = point
+
+        boundX1 += dx
+        boundX2 += dx
+        boundY1 += dy
+        boundY2 += dy
+    }
+
+    /// Moves the button the least distance that puts it wholly inside `frame`, `margin`
+    /// clear of its edges. A button that's already inside stays exactly where it is, so a
+    /// layout that fits a screen is left alone and only screens where it doesn't change.
+    func keep(inside frame: CGRect, margin: CGFloat = 12){
+        let halfWidth = unclickedSprite.size.width/2 + margin
+        let halfHeight = unclickedSprite.size.height/2 + margin
+        move(to: CGPoint(x: min(max(x, frame.minX + halfWidth), frame.maxX - halfWidth),
+                         y: min(max(y, frame.minY + halfHeight), frame.maxY - halfHeight)))
+    }
+
     func toggleDisable(){
         disabled = !disabled
         if(disabled){

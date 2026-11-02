@@ -94,7 +94,7 @@ final class AttributionsScene: SKScene, PresentedScene {
         addChild(BackgroundOverlay.make())
 
         mountains.anchorPoint = CGPoint(x: 0, y: 0)
-        mountains.position = CGPoint(x: -WIDTH/2, y: -HEIGHT/2)
+        mountains.position = CGPoint(x: -WIDTH/2, y: GameViewController.mountainsBaseY)
         mountains.zPosition = -0.9
         addChild(mountains)
 
@@ -110,6 +110,9 @@ final class AttributionsScene: SKScene, PresentedScene {
                               unclick: "homebuttonsmall", click: "homebuttonsmall",
                               test_function: goHome)
         homeButton.scale(scale: 0.65)
+        // Pulled in from the corner only where it would otherwise be off-screen or under
+        // the camera, rounded corners or home indicator.
+        homeButton.keep(inside: safeFrame)
         for child in homeButton.getSpriteNode() {
             addChild(child)
         }
