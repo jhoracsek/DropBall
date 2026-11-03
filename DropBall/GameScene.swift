@@ -209,12 +209,37 @@ class GameScene: SKScene, PresentedScene {
     /// Pulls the pause and resume buttons, and the debug panel, in from their corners only
     /// where they'd otherwise be off-screen or under the camera, rounded corners or home
     /// indicator. Called by SceneRenderer, including mid-run when the window rotates.
+    ///
+    /// A call after the first means the window changed mid-run — the iPhone Duo folded,
+    /// unfolded or turned — so the game is paused, as if the pause button had been pressed.
+    /// Doing that takes a second or two of handling the phone, while the game also jumps
+    /// between filling the screen and showing bars, so carrying on through it isn't fair.
     func layoutForSafeFrame(){
         pauseButton.keep(inside: safeFrame)
         resumeButton.keep(inside: safeFrame)
         #if DEBUG
         debugOverlay?.keep(inside: safeFrame)
         #endif
+
+        if hasLaidOut {
+            pauseForWindowChange()
+        }
+        hasLaidOut = true
+    }
+
+    /// Whether layoutForSafeFrame() has run once, for the scene's first layout.
+    private var hasLaidOut = false
+
+    /// The pause button's own action, for a run that's still going and not already paused.
+    private func pauseForWindowChange(){
+        guard !gamePaused, !gameLost else { return }
+        pauseButton.toggleDisable()
+        resumeButton.toggleDisable()
+        gamePaused = true
+        // The finger steering the ball is usually lifted to fold the phone, but the system
+        // may cancel the touch rather than end it, so let go of the ball as touchUp would.
+        deaccelerate = true
+        isTouched = false
     }
 
     #if DEBUG
