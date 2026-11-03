@@ -132,16 +132,10 @@ class GameScene: SKScene, PresentedScene {
         pauseButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"pause", click:"pause", test_function:
                                 { self.pauseButton.toggleDisable(); self.gamePaused = true;self.resumeButton.toggleDisable();} )
         pauseButton.scale(scale: 0.65)
-        // Pulled in from the corner only where it would otherwise be off-screen or under
-        // the camera, rounded corners or home indicator.
-        pauseButton.keep(inside: safeFrame)
         
         resumeButton = SKButton(x:WIDTH/2-75, y:HEIGHT/2-75, unclick:"resume", click:"resume", test_function:
                                     { if(self.pauseCooldown == 0 ){self.pauseButton.toggleDisable(); self.resumeButton.toggleDisable();self.gamePaused = false; self.pauseCooldown=5}}  )
         resumeButton.scale(scale: 0.65)
-        // Pulled in from the corner only where it would otherwise be off-screen or under
-        // the camera, rounded corners or home indicator.
-        resumeButton.keep(inside: safeFrame)
         
         for i in pauseButton.getSpriteNode(){
             self.addChild(i)
@@ -209,6 +203,17 @@ class GameScene: SKScene, PresentedScene {
 
         #if DEBUG
         setUpDebugOverlay()
+        #endif
+    }
+
+    /// Pulls the pause and resume buttons, and the debug panel, in from their corners only
+    /// where they'd otherwise be off-screen or under the camera, rounded corners or home
+    /// indicator. Called by SceneRenderer, including mid-run when the window rotates.
+    func layoutForSafeFrame(){
+        pauseButton.keep(inside: safeFrame)
+        resumeButton.keep(inside: safeFrame)
+        #if DEBUG
+        debugOverlay?.keep(inside: safeFrame)
         #endif
     }
 

@@ -117,22 +117,6 @@ class GameViewController: UIViewController {
         return .portrait
     }
 
-    /// Asks the system to keep the game portrait while it fills the screen. On devices whose
-    /// window can change shape, such as the unfolded iPhone Duo, the system treats the
-    /// portrait-only declaration as a preference and may still hand over a landscape window —
-    /// this strengthens the preference, but isn't a guarantee. When landscape does happen,
-    /// SceneRenderer shows the portrait game with bars either side, so nothing breaks.
-    @available(iOS 26.0, *)
-    override var prefersInterfaceOrientationLocked: Bool {
-        true
-    }
-
-    /// Kept up to date so settings can tell whether the window is currently landscape.
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        ScreenFit.windowIsLandscape = view.bounds.width > view.bounds.height
-    }
-
     override var prefersStatusBarHidden: Bool {
         return true
     }

@@ -11,6 +11,11 @@ import SpriteKit
 class SKButton {
     var x : CGFloat
     var y : CGFloat
+
+    /// Where the button was laid out to sit, before any move to keep it inside the safe
+    /// frame. keep(inside:) always works from here, so repeated relayouts — a window rotating
+    /// back and forth — land in the same place each time rather than drifting.
+    private let designPosition: CGPoint
     
     var unclickedSprite : SKSpriteNode
     var clickedSprite : SKSpriteNode
@@ -29,6 +34,7 @@ class SKButton {
     init(x: CGFloat, y: CGFloat, unclick: String, click: String, test_function : @escaping ()->() ){
         self.x = x
         self.y = y
+        self.designPosition = CGPoint(x: x, y: y)
         
         self.unclickedSprite = SKSpriteNode(imageNamed: unclick)
         self.clickedSprite = SKSpriteNode(imageNamed: click)
@@ -114,14 +120,15 @@ class SKButton {
         boundY2 += dy
     }
 
-    /// Moves the button the least distance that puts it wholly inside `frame`, `margin`
-    /// clear of its edges. A button that's already inside stays exactly where it is, so a
-    /// layout that fits a screen is left alone and only screens where it doesn't change.
+    /// Places the button at its designed position, moved the least distance needed to sit
+    /// wholly inside `frame`, `margin` clear of its edges. A button whose designed position
+    /// already fits stays exactly there, so a layout that fits a screen is left alone and only
+    /// screens where it doesn't change.
     func keep(inside frame: CGRect, margin: CGFloat = 12){
         let halfWidth = unclickedSprite.size.width/2 + margin
         let halfHeight = unclickedSprite.size.height/2 + margin
-        move(to: CGPoint(x: min(max(x, frame.minX + halfWidth), frame.maxX - halfWidth),
-                         y: min(max(y, frame.minY + halfHeight), frame.maxY - halfHeight)))
+        move(to: CGPoint(x: min(max(designPosition.x, frame.minX + halfWidth), frame.maxX - halfWidth),
+                         y: min(max(designPosition.y, frame.minY + halfHeight), frame.maxY - halfHeight)))
     }
 
     func toggleDisable(){

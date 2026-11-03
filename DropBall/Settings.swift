@@ -10,22 +10,22 @@ import Foundation
 /// How the game is framed on a screen squatter than the 16:9 it was designed for, such as
 /// the folded iPhone Duo.
 ///
-/// By default the whole 16:9 game is shown, fitted to the screen's height, with bars down
-/// the sides — so the game itself looks and plays exactly as it does on any phone. Zooming
-/// in fills the screen instead, at the cost of cropping some of the top and bottom, which is
-/// where the descending line and the next platforms come into view.
+/// By default the game zooms in to fill the screen, cropping a little of the top and bottom.
+/// Turning zoom off shows the whole 16:9 game instead, fitted to the screen's height, with
+/// bars down the sides — so the game itself looks exactly as it does on any phone.
 ///
 /// Phones are 16:9 or taller, so they show the game edge to edge either way, and the option
 /// is only offered where it makes a difference.
 enum ScreenFit {
 
-    /// An *off* flag, like every option in the settings menu. Registered as true at launch,
-    /// so zooming starts off and the bars are the default.
+    /// An *off* flag, like every option in the settings menu, so a missing value means zoom
+    /// is on.
     static let zoomOffKey = "ZoomToFillOff"
 
-    /// Call once at launch, before anything reads the setting.
+    /// Call once at launch, before anything reads the setting. Zoom is on by default, which
+    /// an unset off flag already gives; registered explicitly so the default is stated here.
     static func registerDefaults() {
-        UserDefaults.standard.register(defaults: [zoomOffKey: true])
+        UserDefaults.standard.register(defaults: [zoomOffKey: false])
     }
 
     /// Whether to fill the screen and crop, rather than fit it and show bars.
@@ -37,14 +37,11 @@ enum ScreenFit {
     /// GameViewController when it sizes the scene to the screen.
     static var screenIsSquatterThanGame = false
 
-    /// Whether the window is currently wider than it is tall — possible on the unfolded
-    /// iPhone Duo even though the game is portrait-only. Kept up to date by
-    /// GameViewController.
-    static var windowIsLandscape = false
-
-    /// Whether to offer Zoom to Fill right now. Never in a landscape window: filling its
-    /// width with the portrait game would crop away more than half of it.
+    /// Whether to offer Zoom to Fill. The setting only ever takes effect in a portrait
+    /// window — in a landscape one, such as the unfolded iPhone Duo turned sideways, the bars
+    /// stay regardless (see SceneRenderer.displayScale) — but the option itself stays on offer,
+    /// since the settings panel is built once and the window can rotate after that.
     static var isZoomAvailable: Bool {
-        screenIsSquatterThanGame && !windowIsLandscape
+        screenIsSquatterThanGame
     }
 }

@@ -189,9 +189,6 @@ class HighscoreScene: SKScene, PresentedScene {
 
         homeButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: go_home )
         homeButton.scale(scale: 0.65)
-        // Pulled in from the corner only where it would otherwise be off-screen or under
-        // the camera, rounded corners or home indicator.
-        homeButton.keep(inside: safeFrame)
 
         for child in homeButton.getSpriteNode(){
             addChild(child)
@@ -203,7 +200,6 @@ class HighscoreScene: SKScene, PresentedScene {
         layoutContent()
 
         addChild(panel)
-        fitPanel()
 
         #if DEBUG
         setUpDebugOverlay()
@@ -282,7 +278,23 @@ class HighscoreScene: SKScene, PresentedScene {
     /// only when the layout as designed doesn't fit — so every screen it already fitted is
     /// left exactly as it was. Squat screens like the folded iPhone Duo give the scene too
     /// little height for the panel plus its footers.
+    /// Pulls the home button in from its corner only where it would otherwise be off-screen
+    /// or under the camera, then fits the panel into the space left below it. Called by
+    /// SceneRenderer, including when the window rotates or zoom is toggled.
+    func layoutForSafeFrame(){
+        homeButton.keep(inside: safeFrame)
+        fitPanel()
+        #if DEBUG
+        debugOverlay?.keep(inside: safeFrame)
+        #endif
+    }
+
     private func fitPanel() {
+        // Back to the layout as designed first, so a refit after the window changes starts
+        // from the same place as the first one did.
+        panel.setScale(1)
+        panel.position = .zero
+
         let safe = safeFrame
         let margin: CGFloat = 12
 

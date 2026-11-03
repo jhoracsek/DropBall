@@ -110,9 +110,6 @@ final class AttributionsScene: SKScene, PresentedScene {
                               unclick: "homebuttonsmall", click: "homebuttonsmall",
                               test_function: goHome)
         homeButton.scale(scale: 0.65)
-        // Pulled in from the corner only where it would otherwise be off-screen or under
-        // the camera, rounded corners or home indicator.
-        homeButton.keep(inside: safeFrame)
         for child in homeButton.getSpriteNode() {
             addChild(child)
         }
@@ -280,6 +277,12 @@ final class AttributionsScene: SKScene, PresentedScene {
     /// How far the list can travel before its last line reaches the bottom of the window.
     private var maxScroll: CGFloat {
         max(0, contentHeight - Self.windowSize.height + 60)
+    }
+
+    /// Pulls the home button in from its corner only where it would otherwise be off-screen
+    /// or under the camera, rounded corners or home indicator.
+    func layoutForSafeFrame() {
+        homeButton.keep(inside: safeFrame)
     }
 
     private func goHome() {

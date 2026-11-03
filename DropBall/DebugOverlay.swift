@@ -107,6 +107,18 @@ final class DebugOverlay {
     private let container = SKNode()
     private var buttons: [DebugButton] = []
 
+    /// The top-left spot the panel was laid out for, before any move into the safe frame.
+    private let designPosition: CGPoint
+
+    /// Pulls the panel in from the top-left corner only where it would otherwise be off-screen
+    /// or under the camera — the same rule as the game's own corner buttons. Works from the
+    /// designed position, so the owning scene can call it again whenever the window changes.
+    func keep(inside safe: CGRect) {
+        let margin: CGFloat = 12
+        container.position = CGPoint(x: max(designPosition.x, safe.minX + Self.buttonSize.width/2 + margin),
+                                     y: min(designPosition.y, safe.maxY - Self.buttonSize.height/2 - margin))
+    }
+
     /// - Parameters:
     ///   - target: the scene to attach to.
     ///   - sceneSize: used to pin the panel to the top-left, clear of the pause button.
@@ -114,16 +126,12 @@ final class DebugOverlay {
         // Far above everything else in the scene so it is never occluded by the lose
         // overlay or the pause text.
         container.zPosition = 10_000
-        container.position = CGPoint(x: -sceneSize.width/2 + Self.buttonSize.width/2 + 24,
-                                     y: sceneSize.height/2 - 70)
+        designPosition = CGPoint(x: -sceneSize.width/2 + Self.buttonSize.width/2 + 24,
+                                 y: sceneSize.height/2 - 70)
+        container.position = designPosition
 
-        // Pulled in from the top-left corner only where it would otherwise be off-screen
-        // or under the camera, the same rule as the game's own corner buttons.
         if let scene = target as? SKScene {
-            let safe = scene.safeFrame
-            let margin: CGFloat = 12
-            container.position.x = max(container.position.x, safe.minX + Self.buttonSize.width/2 + margin)
-            container.position.y = min(container.position.y, safe.maxY - Self.buttonSize.height/2 - margin)
+            keep(inside: scene.safeFrame)
         }
 
         // Read once: the switch lives on the main menu, and every scene with a panel is

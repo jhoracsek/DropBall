@@ -121,9 +121,6 @@ class StartScene: SKScene, PresentedScene {
         // made tapping settings flash a house.
         settingsButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"settings", click:"settings", test_function: toggle_settings )
         settingsButton.scale(scale: 0.65)
-        // Pulled in from the corner only where it would otherwise be off-screen or under
-        // the camera, rounded corners or home indicator.
-        settingsButton.keep(inside: safeFrame)
         
         for i in settingsButton.getSpriteNode(){
             self.addChild(i)
@@ -133,18 +130,11 @@ class StartScene: SKScene, PresentedScene {
         settingsDropdown?.onShowCredits = { [weak self] in
             self?.go_to_credits()
         }
-        settingsDropdown?.onSettingChanged = { [weak self] key, isOn in
+        settingsDropdown?.onSettingChanged = { key, isOn in
             // Sound effects read the setting on each play, so they need nothing here. Music
             // is already running, so it has to be told to stop or start straight away.
             if key == "MusicOff" {
                 Music.shared.setEnabled(isOn)
-            }
-
-            // Zooming changes how much of the scene is on screen, and the corner buttons are
-            // placed against that when the scene is built — so build the menu again, with
-            // the usual cross-fade, rather than leave the gear where it may now be cropped.
-            if key == ScreenFit.zoomOffKey {
-                self?.reload_menu()
             }
         }
         
@@ -176,13 +166,12 @@ class StartScene: SKScene, PresentedScene {
         settingsDropdown?.toggleExpanded()
     }
 
-    /// A fresh copy of this menu, laid out for the current screen framing.
-    func reload_menu(){
-        if let scene = SKScene(fileNamed: "StartScene") {
-            scene.size = CGSize(width:GameViewController.WIDTH, height:GameViewController.HEIGHT)
-            scene.scaleMode = .aspectFill
-            transition(to: scene)
-        }
+    /// Pulls the gear in from the corner only where it would otherwise be off-screen or under
+    /// the camera, rounded corners or home indicator, and hangs the settings panel from it.
+    /// Called by SceneRenderer, including when the window rotates or zoom is toggled.
+    func layoutForSafeFrame(){
+        settingsButton.keep(inside: safeFrame)
+        settingsDropdown?.anchor(below: settingsButton)
     }
 
     /// Built in code rather than loaded from a .sks, so it's constructed directly.

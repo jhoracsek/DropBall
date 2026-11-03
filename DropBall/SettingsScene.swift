@@ -24,6 +24,12 @@ class SettingsScene: SKScene, PresentedScene {
 
     var rumbleOff = UserDefaults.standard.bool(forKey: "RumbleOff")
 
+    /// Pulls the home button in from its corner only where it would otherwise be off-screen
+    /// or under the camera, rounded corners or home indicator.
+    func layoutForSafeFrame(){
+        homeButton.keep(inside: safeFrame)
+    }
+
     func go_home(){
         Entity.cameraTranslationY = 0
         if let scene = SKScene(fileNamed: "StartScene") {
@@ -69,9 +75,6 @@ class SettingsScene: SKScene, PresentedScene {
 
         homeButton = SKButton(x:(WIDTH/2-75), y:HEIGHT/2-75, unclick:"homebuttonsmall", click:"homebuttonsmall", test_function: go_home )
         homeButton.scale(scale: 0.65)
-        // Pulled in from the corner only where it would otherwise be off-screen or under
-        // the camera, rounded corners or home indicator.
-        homeButton.keep(inside: safeFrame)
         buttons.append(homeButton)
 
         rumbleButton = SKButton(x:0, y:0, unclick:"play", click:"play", test_function: toggle_rumble )

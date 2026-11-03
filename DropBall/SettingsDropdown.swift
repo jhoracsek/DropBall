@@ -64,8 +64,7 @@ final class SettingsDropdown {
     /// show a chevron rather than ON/OFF.
     ///
     /// Worked out each time a panel is built rather than once, because Zoom to Fill only
-    /// appears on screens squatter than 16:9 — the only ones it does anything on — and
-    /// never while the window is landscape.
+    /// appears on screens squatter than 16:9 — the only ones it does anything on.
     private static var options: [(title: String, disabledKey: String?)] {
         var options: [(title: String, disabledKey: String?)] = [
             ("Rumble", "RumbleOff"),
@@ -114,8 +113,9 @@ final class SettingsDropdown {
 
     /// Where the container sits when the panel is fully open. The single source of truth
     /// for its position — every animation targets this absolutely rather than nudging the
-    /// current position, so repeated opening and closing cannot accumulate drift.
-    private let restingPosition: CGPoint
+    /// current position, so repeated opening and closing cannot accumulate drift. Updated by
+    /// anchor(below:) when the gear moves.
+    private var restingPosition: CGPoint
 
     /// How far above its resting place the panel starts and ends, for the slide.
     private static let slideOffset: CGFloat = 14
@@ -127,13 +127,8 @@ final class SettingsDropdown {
     ///     to it even if the button is moved or rescaled.
     ///   - parent: the scene.
     init(below button: SKButton, in parent: SKNode) {
-        let gear = button.getSpriteNode()[0]
         panelHeight = CGFloat(Self.options.count) * Self.rowHeight + 2 * Self.verticalPadding
-
-        let right = gear.position.x + gear.size.width/2
-        let top = gear.position.y - gear.size.height/2 - Self.gapBelowButton
-
-        restingPosition = CGPoint(x: right - Self.panelWidth/2, y: top)
+        restingPosition = Self.restingPosition(below: button)
 
         container.name = "settingsDropdown"
         container.position = restingPosition
@@ -144,6 +139,25 @@ final class SettingsDropdown {
 
         addPanel()
         addRows()
+    }
+
+    /// Where the panel's top edge sits, hanging from the gear's bottom-right corner.
+    private static func restingPosition(below button: SKButton) -> CGPoint {
+        let gear = button.getSpriteNode()[0]
+        let right = gear.position.x + gear.size.width/2
+        let top = gear.position.y - gear.size.height/2 - gapBelowButton
+        return CGPoint(x: right - panelWidth/2, y: top)
+    }
+
+    /// Re-hangs the panel from the gear after the gear has moved — a relayout for a rotated
+    /// or unfolded window. Any open or close animation is finished on the spot, so the panel
+    /// lands exactly in its new place in whichever state it was heading for.
+    func anchor(below button: SKButton) {
+        restingPosition = Self.restingPosition(below: button)
+        container.removeAllActions()
+        container.position = restingPosition
+        container.alpha = isExpanded ? 1 : 0
+        container.isHidden = !isExpanded
     }
 
     /// A rounded rectangle whose corners are a staircase of square blocks instead of a

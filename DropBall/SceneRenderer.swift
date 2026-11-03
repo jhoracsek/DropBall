@@ -6,6 +6,7 @@
 import UIKit
 import SpriteKit
 import Metal
+import MetalPerformanceShaders
 import QuartzCore
 
 /// Lifecycle hooks for scenes shown by SceneRenderer, in place of SKScene's didMove(to:) and
@@ -16,10 +17,18 @@ protocol PresentedScene: SKScene {
 
     /// Called just before the scene is replaced by another.
     func willDismiss()
+
+    /// Positions anything that depends on the safe frame — corner buttons, panels sized to
+    /// fit. Called straight after didPresent(), and again whenever the window's size, the
+    /// safe area or the zoom setting changes, such as when the iPhone Duo is rotated or
+    /// unfolded. Must be safe to call repeatedly: lay out from the designed positions, not
+    /// from wherever things were last moved.
+    func layoutForSafeFrame()
 }
 
 extension PresentedScene {
     func willDismiss() {}
+    func layoutForSafeFrame() {}
 }
 
 extension SKScene {
@@ -149,6 +158,10 @@ final class SceneRenderer: NSObject {
     private let commandQueue: MTLCommandQueue
     private let renderer: SKRenderer
 
+    /// Draws a scene narrower than the screen together with its bars. See barsShaderSource.
+    /// Nil only if the shader failed to load, in which case the bars are a flat colour.
+    private let barsPipeline: MTLRenderPipelineState?
+
     /// CAMetalDisplayLink on iOS 17+, CADisplayLink before that.
     private var displayLink: AnyObject?
 
@@ -165,6 +178,29 @@ final class SceneRenderer: NSObject {
     /// The scene that received the current touch's touchesBegan, so a touch that started
     /// before a scene change isn't finished on a scene that never saw it start.
     private weak var touchScene: SKScene?
+
+    /// What the current scene was last laid out for. When any of it changes, the scene's
+    /// safe-frame layout is redone — see relayoutIfNeeded().
+    private struct LayoutState: Equatable {
+        var size: CGSize
+        var insets: UIEdgeInsets
+        var zoomsToFill: Bool
+    }
+    private var lastLayout: LayoutState?
+
+    private var currentLayout: LayoutState {
+        LayoutState(size: view.bounds.size, insets: view.gameSafeAreaInsets,
+                    zoomsToFill: ScreenFit.zoomsToFill)
+    }
+
+    /// Checked at the start of every frame — a handful of comparisons — so the scene follows
+    /// a rotation, a fold or unfold, or a change of the zoom setting straight away.
+    private func relayoutIfNeeded() {
+        let layout = currentLayout
+        guard layout != lastLayout else { return }
+        lastLayout = layout
+        (scene as? PresentedScene)?.layoutForSafeFrame()
+    }
 
     /// True while the app is inactive — Control Center, the notification shade, a system
     /// sheet. The scene is paused meanwhile, as SKView did, so a run can't carry on alone.
@@ -190,6 +226,7 @@ final class SceneRenderer: NSObject {
         self.device = device
         self.commandQueue = commandQueue
         self.renderer = SKRenderer(device: device)
+        self.barsPipeline = Self.makeBarsPipeline(device: device, pixelFormat: .bgra8Unorm)
         super.init()
 
         SceneRenderer.shared = self
@@ -259,6 +296,8 @@ final class SceneRenderer: NSObject {
         scene = next
         renderer.scene = next
         (next as? PresentedScene)?.didPresent()
+        (next as? PresentedScene)?.layoutForSafeFrame()
+        lastLayout = currentLayout
 
         // Scenes loaded from a .sks file arrive paused, and SKView.presentScene was what
         // unpaused them. One arriving while the app is inactive stays paused like the rest.
@@ -507,6 +546,7 @@ final class SceneRenderer: NSObject {
     /// per frame, so GameScene's fixed-step update sees perfectly even gaps.
     private func drawFrame(into drawable: CAMetalDrawable, at time: CFTimeInterval) {
         applyPendingScene(at: time)
+        relayoutIfNeeded()
 
         guard let scene,
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
@@ -538,13 +578,14 @@ final class SceneRenderer: NSObject {
     /// only remade when the size it needs changes.
     private var sceneTexture: MTLTexture?
 
-    /// Draws the scene fitted and centred in `target`, with the bar colour either side.
+    /// Draws the scene fitted and centred in `target`, with bars either side that carry on
+    /// from its edges.
     ///
     /// SKRenderer scales the scene to fill whatever it's rendering into and ignores the size
     /// of the viewport it's given, so drawing straight into the screen would spread a narrower
     /// scene across the bars. Where the scene fills the screen — every phone — it's drawn
-    /// directly. Otherwise it's drawn into a texture of exactly its own size, the screen is
-    /// cleared to the bar colour, and the texture is copied into the middle.
+    /// directly. Otherwise it's drawn into a texture of exactly its own size, and the bars shader
+    /// draws that into the middle of the screen with a blurred reflection of it in each bar.
     private func draw(_ scene: SKScene, into target: MTLTexture, commandBuffer: MTLCommandBuffer) {
         let area = viewport(for: scene, drawableSize: CGSize(width: target.width, height: target.height))
         let x = max(0, Int(area.minX.rounded()))
@@ -566,6 +607,31 @@ final class SceneRenderer: NSObject {
                         commandBuffer: commandBuffer,
                         renderPassDescriptor: renderPass(into: offscreen, clearingTo: scene.backgroundColor))
 
+        // A small, blurred copy of the scene for the bars to show, then the scene and its bars
+        // in one pass, every pixel of the screen written by the shader.
+        if let barsPipeline, let backdropShrink, let backdropBlur,
+           let (shrunk, blurred) = backdropTextures(sceneWidth: width, sceneHeight: height) {
+            backdropShrink.encode(commandBuffer: commandBuffer,
+                                  sourceTexture: offscreen, destinationTexture: shrunk)
+            backdropBlur.encode(commandBuffer: commandBuffer,
+                                sourceTexture: shrunk, destinationTexture: blurred)
+
+            let pass = renderPass(into: target, clearingTo: Self.barColor)
+            pass.colorAttachments[0].loadAction = .dontCare
+            guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
+            var uniforms = BarsUniforms(
+                sceneOrigin: SIMD2(Float(x), Float(y)),
+                sceneSize: SIMD2(Float(width), Float(height)),
+                targetSize: SIMD2(Float(target.width), Float(target.height)))
+            encoder.setRenderPipelineState(barsPipeline)
+            encoder.setFragmentTexture(offscreen, index: 0)
+            encoder.setFragmentTexture(blurred, index: 1)
+            encoder.setFragmentBytes(&uniforms, length: MemoryLayout<BarsUniforms>.stride, index: 0)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
+            encoder.endEncoding()
+            return
+        }
+
         // A pass with nothing drawn in it, just to clear the screen to the bar colour.
         commandBuffer.makeRenderCommandEncoder(descriptor: renderPass(into: target, clearingTo: Self.barColor))?
             .endEncoding()
@@ -586,11 +652,125 @@ final class SceneRenderer: NSObject {
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.metalLayer.pixelFormat,
                                                                   width: width, height: height,
                                                                   mipmapped: false)
-        descriptor.usage = [.renderTarget]
+        descriptor.usage = [.renderTarget, .shaderRead]
         descriptor.storageMode = .private
         sceneTexture = device.makeTexture(descriptor: descriptor)
         return sceneTexture
     }
+
+    /// How much smaller than the scene the bars' blurred copy of it is. Blurring a copy this
+    /// small is all but free, and the blur hides the loss of detail.
+    private static let backdropReduction = 8
+
+    /// Shrinks the scene to backdrop size, and blurs the result. Sigma is in backdrop pixels,
+    /// so the blur reaches about 5 × backdropReduction pixels of the full-size scene.
+    private lazy var backdropShrink: MPSImageLanczosScale? =
+        MPSSupportsMTLDevice(device) ? MPSImageLanczosScale(device: device) : nil
+    private lazy var backdropBlur: MPSImageGaussianBlur? =
+        MPSSupportsMTLDevice(device) ? MPSImageGaussianBlur(device: device, sigma: 5) : nil
+
+    /// The shrunk scene and its blurred copy. Kept between frames like sceneTexture.
+    private var backdropTextures: (shrunk: MTLTexture, blurred: MTLTexture)?
+
+    private func backdropTextures(sceneWidth: Int, sceneHeight: Int) -> (MTLTexture, MTLTexture)? {
+        let width = max(1, sceneWidth / Self.backdropReduction)
+        let height = max(1, sceneHeight / Self.backdropReduction)
+        if let textures = backdropTextures,
+           textures.shrunk.width == width, textures.shrunk.height == height {
+            return textures
+        }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.metalLayer.pixelFormat,
+                                                                  width: width, height: height,
+                                                                  mipmapped: false)
+        descriptor.usage = [.shaderRead, .shaderWrite]
+        descriptor.storageMode = .private
+        guard let shrunk = device.makeTexture(descriptor: descriptor),
+              let blurred = device.makeTexture(descriptor: descriptor) else { return nil }
+        backdropTextures = (shrunk, blurred)
+        return (shrunk, blurred)
+    }
+
+    /// Matches BarsUniforms in barsShaderSource.
+    private struct BarsUniforms {
+        var sceneOrigin: SIMD2<Float>
+        var sceneSize: SIMD2<Float>
+        var targetSize: SIMD2<Float>
+    }
+
+    /// Compiled when the renderer is created rather than built into the app, so building the
+    /// project doesn't need Xcode's separately downloaded Metal toolchain. It's one small
+    /// shader, and compiling it takes a few milliseconds.
+    private static func makeBarsPipeline(device: MTLDevice,
+                                         pixelFormat: MTLPixelFormat) -> MTLRenderPipelineState? {
+        guard let library = try? device.makeLibrary(source: barsShaderSource, options: nil) else {
+            return nil
+        }
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction = library.makeFunction(name: "barsVertex")
+        descriptor.fragmentFunction = library.makeFunction(name: "barsFragment")
+        descriptor.colorAttachments[0].pixelFormat = pixelFormat
+        return try? device.makeRenderPipelineState(descriptor: descriptor)
+    }
+
+    /// Draws a scene narrower than the screen, with the bars either side carrying on from
+    /// its edges instead of being one flat colour.
+    ///
+    /// Inside the scene's rectangle it's the scene's own pixels. Each bar shows a blurred
+    /// mirror image of the scene beside it, reflected at the seam. Every row of the bar is
+    /// the same row of the scene, so the sky, ground and mountains run straight on into it,
+    /// and nothing is stretched — stretching the edge pixels across a bar as wide as the
+    /// unfolded iPhone Duo's turned the ball and platforms into long streaks. It's darkened
+    /// gradually towards the screen's edge, so the bars read as the game's surroundings
+    /// rather than part of it.
+    private static let barsShaderSource = """
+        #include <metal_stdlib>
+        using namespace metal;
+
+        struct BarsVertexOut {
+            float4 position [[position]];
+        };
+
+        // One triangle that covers the whole screen, so no vertex buffer is needed.
+        vertex BarsVertexOut barsVertex(uint id [[vertex_id]]) {
+            float2 corner = float2((id << 1) & 2, id & 2);
+            BarsVertexOut out;
+            out.position = float4(corner * 2.0 - 1.0, 0.0, 1.0);
+            return out;
+        }
+
+        // All in drawable pixels, origin top left.
+        struct BarsUniforms {
+            float2 sceneOrigin;
+            float2 sceneSize;
+            float2 targetSize;
+        };
+
+        fragment half4 barsFragment(BarsVertexOut in [[stage_in]],
+                                    texture2d<half> scene [[texture(0)]],
+                                    texture2d<half> backdrop [[texture(1)]],
+                                    constant BarsUniforms &u [[buffer(0)]]) {
+            float2 local = in.position.xy - u.sceneOrigin;
+
+            if (all(local >= 0.0) && all(local < u.sceneSize)) {
+                return scene.read(uint2(local));
+            }
+
+            // Past either edge, mirrored_repeat reflects the coordinate back into the scene.
+            constexpr sampler mirrorSampler(filter::linear, address::mirrored_repeat);
+            half4 color = backdrop.sample(mirrorSampler, local / u.sceneSize);
+
+            // How far across its bar this pixel is: 0 at the seam, 1 at the screen's edge.
+            bool isLeft = local.x < 0.0;
+            float barWidth = max(isLeft ? u.sceneOrigin.x
+                                        : u.targetSize.x - u.sceneOrigin.x - u.sceneSize.x, 1.0);
+            float distance = isLeft ? -local.x : local.x - u.sceneSize.x;
+            float t = saturate(distance / barWidth);
+
+            color.rgb *= half(mix(0.9, 0.6, t));
+            color.a = 1.0;
+            return color;
+        }
+        """
 
     /// Where the scene goes in the drawable: keeping its shape, centred, at displayScale.
     /// When zoomed to fill, it overhangs the drawable and draw(_:into:) renders it straight
@@ -606,7 +786,8 @@ final class SceneRenderer: NSObject {
     }
 
     /// Fills whatever the scene doesn't cover — the bars down the sides on a screen squatter
-    /// than 16:9. The same deep blue GameScene uses as its background colour.
+    /// than 16:9 — if the bars shader couldn't be loaded. The same deep blue GameScene uses
+    /// as its background colour.
     private static let barColor = SKColor(red: 18/256, green: 45/256, blue: 110/256, alpha: 1)
 
     private func renderPass(into texture: MTLTexture, clearingTo color: SKColor) -> MTLRenderPassDescriptor {
