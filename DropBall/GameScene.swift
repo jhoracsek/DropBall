@@ -155,6 +155,8 @@ class GameScene: SKScene, PresentedScene {
         loadPlatforms()
         loadClouds()
         top.strech(sX: 750)
+        // After the ball is scaled, since the line's placement depends on its size.
+        top.place(above: ball, by: 500)
         ball.getSpriteNode().zPosition = 2
         addChild(ball.getSpriteNode())
         addChild(ball.initSecondarySprite())

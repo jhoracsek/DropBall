@@ -20,6 +20,21 @@ class Top : Entity{
         super.init(posX:0, posY: posY, imageNamed: "line", falls: false)
     }
 
+    /// Puts the line `designGap` above `ball`, centre to centre, at reference height — and
+    /// sets that as the highest a boost can push it back up to.
+    ///
+    /// What ends a run is the distance from the line's lower edge to the top of the ball,
+    /// so that's what has to scale with vScale for the line to take the same time to arrive
+    /// on every screen. The ball's radius and the line's thickness are fixed sizes, so
+    /// scaling the centre-to-centre distance instead gave taller screens a few more points of
+    /// headroom: about a quarter of a second's extra survival on an iPhone 15 over an 8 Plus.
+    func place(above ball: Entity, by designGap: CGFloat){
+        let contactDistance = ball.collisionRadius + height/2
+        posY = (designGap - contactDistance) * GameViewController.vScale + contactDistance
+        limit = posY
+        sprite.position.y = posY
+    }
+
     /// Nudges the line back up briefly, as a reward for clearing a platform.
     func boost(){
         increase = true
