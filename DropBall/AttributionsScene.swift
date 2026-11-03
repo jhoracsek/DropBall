@@ -201,8 +201,19 @@ final class AttributionsScene: SKScene, PresentedScene {
         let usableWidth = Self.windowSize.width - Self.textInset * 2
         var y: CGFloat = 0
 
-        for (index, item) in Attributions.all.enumerated() {
-            if index > 0 { y -= Self.entrySpacing }
+        // The game's own credit, set like an entry but with no licence or links.
+        let gameHeading = label(Attributions.gameTitle, size: Self.titleSize, color: Self.headingColor)
+        gameHeading.position = CGPoint(x: left, y: y)
+        content.addChild(gameHeading)
+        y -= Self.lineSpacing + 4
+
+        let creator = label("by \(Attributions.creator)", size: Self.bodySize, color: Self.bodyColor)
+        creator.position = CGPoint(x: left, y: y)
+        content.addChild(creator)
+        y -= Self.lineSpacing
+
+        for item in Attributions.all {
+            y -= Self.entrySpacing
 
             let heading = label(item.title, size: Self.titleSize, color: Self.headingColor)
             heading.position = CGPoint(x: left, y: y)

@@ -93,6 +93,10 @@ enum Licences {
 /// list, so there's no layout to touch.
 enum Attributions {
 
+    /// Who made the game itself, shown above the third-party assets.
+    static let gameTitle = "DropBall"
+    static let creator = "Jordan Horacsek"
+
     static let all: [Attribution] = [
         Attribution(
             title: "Free Chiptune Music Pack 5",
