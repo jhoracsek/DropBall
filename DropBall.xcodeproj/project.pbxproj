@@ -21,6 +21,7 @@
 		17C31CC230967C37002DBA53 /* SceneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C31CC130967C37002DBA53 /* SceneRenderer.swift */; };
 		17E6886830852B3400BDF09D /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E6886730852B3400BDF09D /* Diagnostics.swift */; };
 		17E6886A30854A0700BDF09D /* bounce1.wav in Resources */ = {isa = PBXBuildFile; fileRef = 17E6886930854A0700BDF09D /* bounce1.wav */; };
+		179FD3F830892F26008B99A2 /* loss.wav in Resources */ = {isa = PBXBuildFile; fileRef = 179FD3F930892F26008B99A2 /* loss.wav */; };
 		17E6886C30854A0A00BDF09D /* bounce2.wav in Resources */ = {isa = PBXBuildFile; fileRef = 17E6886B30854A0A00BDF09D /* bounce2.wav */; };
 		17E6886E30854A0D00BDF09D /* bounce3.wav in Resources */ = {isa = PBXBuildFile; fileRef = 17E6886D30854A0D00BDF09D /* bounce3.wav */; };
 		17E6887030854A4300BDF09D /* Audio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E6886F30854A4300BDF09D /* Audio.swift */; };
@@ -97,6 +98,7 @@
 		17C31CC130967C37002DBA53 /* SceneRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRenderer.swift; sourceTree = "<group>"; };
 		17E6886730852B3400BDF09D /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		17E6886930854A0700BDF09D /* bounce1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce1.wav; sourceTree = "<group>"; };
+		179FD3F930892F26008B99A2 /* loss.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = loss.wav; sourceTree = "<group>"; };
 		17E6886B30854A0A00BDF09D /* bounce2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce2.wav; sourceTree = "<group>"; };
 		17E6886D30854A0D00BDF09D /* bounce3.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bounce3.wav; sourceTree = "<group>"; };
 		17E6886F30854A4300BDF09D /* Audio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Audio.swift; sourceTree = "<group>"; };
@@ -180,6 +182,7 @@
 				17E6887B3085BF3D00BDF09D /* music_with_my_name.m4a */,
 				17E6887D3085BF4100BDF09D /* music_first_memories.m4a */,
 				17E6886930854A0700BDF09D /* bounce1.wav */,
+				179FD3F930892F26008B99A2 /* loss.wav */,
 				17E6886B30854A0A00BDF09D /* bounce2.wav */,
 				17E6886D30854A0D00BDF09D /* bounce3.wav */,
 				17AA134B307DAAF200866DC1 /* PixelOperator8.ttf */,
@@ -408,6 +411,7 @@
 				17E6886E30854A0D00BDF09D /* bounce3.wav in Resources */,
 				17E6887A3085BF3800BDF09D /* music_so_do_i.m4a in Resources */,
 				17E6886A30854A0700BDF09D /* bounce1.wav in Resources */,
+				179FD3F830892F26008B99A2 /* loss.wav in Resources */,
 				17E688763085BF2E00BDF09D /* music_world_of_nowhere.m4a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

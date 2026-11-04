@@ -506,6 +506,7 @@ class GameScene: SKScene, PresentedScene {
         gameLost = true
 
         ball.stopEffects()
+        Audio.playLoss()
 
         // Read before save(), which no longer writes straight away, so this run is folded in
         // by hand. A fetch limited to one row is cheap enough to stay on this frame.

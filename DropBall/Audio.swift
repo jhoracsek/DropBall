@@ -20,6 +20,9 @@ enum Audio {
     /// Variants of the bounce, picked between so repeated landings don't sound mechanical.
     private static let bounceNames = ["bounce1", "bounce2", "bounce3"]
 
+    /// Played once when a run ends.
+    private static let lossName = "loss"
+
     /// Player nodes sharing one pool, used round-robin. Generous for ~150ms clips landing
     /// under a second apart, but nodes are cheap and it guarantees overlaps never clip.
     private static let voiceCount = 6
@@ -28,9 +31,19 @@ enum Audio {
     private static let minVolume: Float = 0.35
     private static let maxVolume: Float = 1.0
 
+    /// The loss sting is a one-off with nothing competing with it, so it doesn't need the
+    /// headroom the bounces leave for overlapping with each other.
+    private static let lossVolume: Float = 1.0
+
     private static let engine = AVAudioEngine()
     private static var buffers: [AVAudioPCMBuffer] = []
     private static var players: [AVAudioPlayerNode] = []
+
+    /// The loss sting gets its own node rather than a slot in the bounce pool. It runs for
+    /// two seconds — long enough that a new run can start underneath it — and the pool
+    /// schedules with `.interrupts`, so a bounce landing on the same node would cut it off.
+    private static var lossBuffer: AVAudioPCMBuffer?
+    private static let lossPlayer = AVAudioPlayerNode()
     private static var nextVoice = 0
     private static var lastVariant = -1
     private static var isLoaded = false
@@ -68,38 +81,51 @@ enum Audio {
     }
 
     private static func loadBuffers() {
-        for name in bounceNames {
-            guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
-                print("Missing sound file: \(name).wav")
-                continue
-            }
+        buffers = bounceNames.compactMap(decode)
+        lossBuffer = decode(lossName)
+    }
 
-            do {
-                let file = try AVAudioFile(forReading: url)
-                guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
-                                                    frameCapacity: AVAudioFrameCount(file.length)) else {
-                    print("Could not allocate buffer for \(name).wav")
-                    continue
-                }
-                // Decoded once, here, rather than on every trigger.
-                try file.read(into: buffer)
-                buffers.append(buffer)
-            } catch {
-                print("Could not decode \(name).wav: \(error)")
+    /// Decodes a bundled clip into memory once, rather than on every trigger.
+    private static func decode(_ name: String) -> AVAudioPCMBuffer? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "wav") else {
+            print("Missing sound file: \(name).wav")
+            return nil
+        }
+
+        do {
+            let file = try AVAudioFile(forReading: url)
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                                frameCapacity: AVAudioFrameCount(file.length)) else {
+                print("Could not allocate buffer for \(name).wav")
+                return nil
             }
+            try file.read(into: buffer)
+            return buffer
+        } catch {
+            print("Could not decode \(name).wav: \(error)")
+            return nil
         }
     }
 
     private static func startEngine() {
-        // Every clip is the same format, so one connection format serves all the nodes.
-        guard let format = buffers.first?.format else { return }
-
-        for _ in 0..<voiceCount {
-            let node = AVAudioPlayerNode()
-            engine.attach(node)
-            engine.connect(node, to: engine.mainMixerNode, format: format)
-            players.append(node)
+        // Every bounce variant is the same format, so one connection format serves the pool.
+        // The loss clip is connected with its own buffer's format rather than this one, so
+        // the two don't have to agree.
+        if let format = buffers.first?.format {
+            for _ in 0..<voiceCount {
+                let node = AVAudioPlayerNode()
+                engine.attach(node)
+                engine.connect(node, to: engine.mainMixerNode, format: format)
+                players.append(node)
+            }
         }
+
+        if let format = lossBuffer?.format {
+            engine.attach(lossPlayer)
+            engine.connect(lossPlayer, to: engine.mainMixerNode, format: format)
+        }
+
+        guard !players.isEmpty || lossBuffer != nil else { return }
 
         do {
             try engine.start()
@@ -107,11 +133,26 @@ enum Audio {
             // Started once and left running. A running node with nothing scheduled sits
             // idle, and scheduling onto it then plays immediately — which is what removes
             // the per-trigger start cost.
-            for node in players {
+            for node in allNodes {
                 node.play()
             }
         } catch {
             print("Audio engine error: \(error)")
+        }
+    }
+
+    private static var allNodes: [AVAudioPlayerNode] {
+        lossBuffer == nil ? players : players + [lossPlayer]
+    }
+
+    /// An interruption or route change (headphones, a call) can stop the engine. Without
+    /// this the game would simply go quiet for the rest of the session.
+    private static func ensureRunning() {
+        guard !engine.isRunning else { return }
+
+        try? engine.start()
+        for node in allNodes where !node.isPlaying {
+            node.play()
         }
     }
 
@@ -123,14 +164,7 @@ enum Audio {
     static func playBounce(strength: CGFloat, scale: CGFloat = 1.0) {
         guard isEnabled, !buffers.isEmpty, !players.isEmpty else { return }
 
-        // An interruption or route change (headphones, a call) can stop the engine. Without
-        // this the game would simply go quiet for the rest of the session.
-        if !engine.isRunning {
-            try? engine.start()
-            for node in players where !node.isPlaying {
-                node.play()
-            }
-        }
+        ensureRunning()
 
         let buffer = buffers[pickVariant()]
 
@@ -144,6 +178,20 @@ enum Audio {
         // .interrupts replaces anything still playing on this node, so a trigger is always
         // immediate even if the round-robin wraps onto a node that's still finishing.
         node.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
+    }
+
+    /// Plays the end-of-run sting. Call once per loss; `lost()` is already guarded against
+    /// running twice in a frame.
+    static func playLoss() {
+        guard isEnabled, let buffer = lossBuffer else { return }
+
+        ensureRunning()
+
+        lossPlayer.volume = lossVolume
+
+        // .interrupts so restarting quickly after a loss retriggers cleanly rather than
+        // queueing a second copy behind the first.
+        lossPlayer.scheduleBuffer(buffer, at: nil, options: .interrupts, completionHandler: nil)
     }
 
     /// Never the same variant twice running — a straight random pick repeats often enough
