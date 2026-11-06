@@ -18,6 +18,12 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<!-- The game makes no network requests of its own and uses no encryption beyond
+	     whatever Apple's own frameworks do internally, which is exempt. Declaring it here
+	     means App Store Connect stops asking the export-compliance question on every
+	     upload. Revisit if the app ever adds its own networking. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
