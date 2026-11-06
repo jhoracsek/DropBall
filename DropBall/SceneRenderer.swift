@@ -436,7 +436,14 @@ final class SceneRenderer: NSObject {
         // Zoom only ever applies to a portrait area. Filling a landscape window's width with
         // the portrait game would crop away more than half of it, so there the bars stay
         // whatever the setting says.
+        //
+        // And only to an area squatter than the scene, where filling it crops the top and
+        // bottom. The scene's shape is fixed at launch, so a window made taller afterwards —
+        // an iPhone app's window on iPad can be resized — would otherwise be filled by
+        // cropping the sides, cutting into the playfield's width. There it gets bars above
+        // and below instead.
         let zooms = ScreenFit.zoomsToFill && areaSize.height >= areaSize.width
+            && widthScale > heightScale
         return zooms ? max(widthScale, heightScale) : min(widthScale, heightScale)
     }
 
@@ -760,11 +767,11 @@ final class SceneRenderer: NSObject {
             half4 color = backdrop.sample(mirrorSampler, local / u.sceneSize);
 
             // How far across its bar this pixel is: 0 at the seam, 1 at the screen's edge.
-            bool isLeft = local.x < 0.0;
-            float barWidth = max(isLeft ? u.sceneOrigin.x
-                                        : u.targetSize.x - u.sceneOrigin.x - u.sceneSize.x, 1.0);
-            float distance = isLeft ? -local.x : local.x - u.sceneSize.x;
-            float t = saturate(distance / barWidth);
+            // The scene is centred, so the bars on opposite sides are the same size. They're
+            // usually down the sides, but a resized iPad window can put them above and below.
+            float2 outside = max(max(-local, local - u.sceneSize), 0.0);
+            float2 barSize = max(u.sceneOrigin, 1.0);
+            float t = saturate(max(outside.x / barSize.x, outside.y / barSize.y));
 
             color.rgb *= half(mix(0.9, 0.6, t));
             color.a = 1.0;
